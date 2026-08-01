@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
-import { POST_COLUMNS, POST_FROM, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
 
 const users = new Hono<AppContext>();
 
@@ -45,7 +45,7 @@ users.get('/me/posts', authMiddleware, async (c) => {
 
   const result = await c.env.DB.prepare(
     `SELECT ${POST_COLUMNS} ${POST_FROM}
-     WHERE p.user_id = ?
+     WHERE p.user_id = ? AND ${OUTSIDE_GROUP_CONDITION}
      ORDER BY p.created_at DESC LIMIT 50`
   ).bind(me.user_id, me.user_id, me.user_id).all();
 

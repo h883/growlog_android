@@ -7,7 +7,7 @@ import { imageUrlFor } from './media';
  */
 export const POST_COLUMNS = `
   p.post_id, p.user_id, p.content, p.post_type, p.progress, p.tags,
-  p.image_key, p.reaction_count, p.comment_count, p.created_at,
+  p.image_key, p.group_id, p.reaction_count, p.comment_count, p.created_at,
   u.display_name, u.user_name, u.profile_image_key, g.title as goal_title,
   CASE WHEN r.reaction_id IS NOT NULL THEN 1 ELSE 0 END as my_reaction,
   CASE WHEN s.post_id IS NOT NULL THEN 1 ELSE 0 END as is_saved`;
@@ -18,6 +18,14 @@ export const POST_FROM = `
   LEFT JOIN goals g ON p.goal_id = g.goal_id
   LEFT JOIN reactions r ON r.post_id = p.post_id AND r.user_id = ?
   LEFT JOIN saves s ON s.post_id = p.post_id AND s.user_id = ?`;
+
+/**
+ * グループ外のタイムラインに出してよい投稿の条件。
+ * グループ投稿は、公開グループで「グループ外にも公開」を選んだものだけ出す（仕様書 9.3）。
+ * WHERE の先頭に置けるよう、単独で成立する式にしてある。
+ */
+export const OUTSIDE_GROUP_CONDITION =
+  `(p.group_id IS NULL OR p.group_visibility = 'public')`;
 
 export function mapPostRow(requestUrl: string, r: any) {
   return {
@@ -32,6 +40,7 @@ export function mapPostRow(requestUrl: string, r: any) {
     progress: r.progress ?? null,
     tags: JSON.parse(r.tags || '[]'),
     imageUrl: imageUrlFor(requestUrl, r.image_key),
+    groupId: r.group_id ?? null,
     reactionCount: r.reaction_count,
     commentCount: r.comment_count,
     myReaction: r.my_reaction === 1,

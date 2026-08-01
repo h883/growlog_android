@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
-import { POST_COLUMNS, POST_FROM, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
 
 const posts = new Hono<AppContext>();
 
@@ -23,7 +23,8 @@ posts.get('/', authMiddleware, async (c) => {
     params.push(me.user_id);
   }
 
-  const conditions: string[] = [];
+  // グループ限定の投稿は、外のタイムラインには出さない
+  const conditions: string[] = [OUTSIDE_GROUP_CONDITION];
 
   // 人気順は直近1週間から拾う。古い投稿がいつまでも上に居座らないようにするため
   if (feed === 'popular') {
@@ -35,7 +36,7 @@ posts.get('/', authMiddleware, async (c) => {
     params.push(cursor);
   }
 
-  const where = conditions.length ? ` WHERE ${conditions.join(' AND ')}` : '';
+  const where = ` WHERE ${conditions.join(' AND ')}`;
   // 人気順は created_at で辿れないのでカーソルページングを行わない
   const orderBy = feed === 'popular'
     ? ' ORDER BY p.reaction_count DESC, p.created_at DESC'

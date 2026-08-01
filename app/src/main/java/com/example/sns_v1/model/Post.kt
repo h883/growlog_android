@@ -10,6 +10,9 @@ data class Post(
     val postType: String = "progress",
     val tags: List<String> = emptyList(),
     val imageUrl: String? = null,
+    /** グループ投稿のときだけ入る */
+    val groupId: String? = null,
+    val isPinned: Boolean = false,
     val progress: Int? = null,
     val goalTitle: String? = null,
     val reactionCount: Int = 0,

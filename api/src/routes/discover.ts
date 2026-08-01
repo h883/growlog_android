@@ -2,7 +2,7 @@ import { Hono, Context } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
-import { POST_COLUMNS, POST_FROM, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
 
 const discover = new Hono<AppContext>();
 
@@ -42,7 +42,7 @@ discover.get('/', authMiddleware, async (c) => {
     // 「今週の挑戦」= 目標が紐付いた最近の投稿
     c.env.DB.prepare(
       `SELECT ${POST_COLUMNS} ${POST_FROM}
-       WHERE p.goal_id IS NOT NULL
+       WHERE p.goal_id IS NOT NULL AND ${OUTSIDE_GROUP_CONDITION}
        ORDER BY p.created_at DESC LIMIT 5`
     ).bind(me.user_id, me.user_id).all(),
   ]);
@@ -94,7 +94,8 @@ discover.get('/search', authMiddleware, async (c) => {
   const [postRows, userRows] = await Promise.all([
     c.env.DB.prepare(
       `SELECT ${POST_COLUMNS} ${POST_FROM}
-       WHERE p.content LIKE ? ESCAPE '\\' OR p.tags LIKE ? ESCAPE '\\'
+       WHERE ${OUTSIDE_GROUP_CONDITION}
+         AND (p.content LIKE ? ESCAPE '\\' OR p.tags LIKE ? ESCAPE '\\')
        ORDER BY p.created_at DESC LIMIT 30`
     ).bind(me.user_id, me.user_id, pattern, pattern).all(),
     c.env.DB.prepare(

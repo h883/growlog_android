@@ -6,6 +6,9 @@ import com.example.sns_v1.model.Notification
 import com.example.sns_v1.model.ChatThread
 import com.example.sns_v1.model.Conversation
 import com.example.sns_v1.model.DiscoverData
+import com.example.sns_v1.model.Group
+import com.example.sns_v1.model.GroupMember
+import com.example.sns_v1.model.GroupVisibility
 import com.example.sns_v1.model.Message
 import com.example.sns_v1.model.Post
 import com.example.sns_v1.model.SearchResult
@@ -365,6 +368,199 @@ class GrowLogApi {
                 Result.failure(e)
             }
         }
+
+    // ---- グループ ----
+
+    private fun parseGroup(j: JSONObject) = Group(
+        groupId = j.getString("groupId"),
+        groupSlug = j.getString("groupSlug"),
+        groupName = j.getString("groupName"),
+        description = j.optString("description", ""),
+        visibility = GroupVisibility.from(j.optString("visibilityType")),
+        joinType = j.optString("joinType", "open"),
+        memberCount = j.optInt("memberCount", 1),
+        maximumMembers = j.optInt("maximumMembers", 500),
+        iconImageUrl = j.optUrl("iconImageUrl"),
+        coverImageUrl = j.optUrl("coverImageUrl"),
+        myRole = j.optUrl("myRole"),
+        isMember = j.optBoolean("isMember", false),
+        isOwner = j.optBoolean("isOwner", false),
+        canViewContent = j.optBoolean("canViewContent", true)
+    )
+
+    suspend fun getGroups(idToken: String, query: String = "", mineOnly: Boolean = false):
+        Result<List<Group>> = withContext(Dispatchers.IO) {
+        try {
+            val params = buildList {
+                if (query.isNotBlank()) add("q=${URLEncoder.encode(query, "UTF-8")}")
+                if (mineOnly) add("mine=true")
+            }
+            val url = "${ApiConfig.BASE_URL}/api/v1/groups" +
+                if (params.isEmpty()) "" else "?" + params.joinToString("&")
+            val request = Request.Builder()
+                .url(url).addHeader("Authorization", "Bearer $idToken").get().build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+                ?: return@withContext Result.failure(Exception("Empty response"))
+            if (!response.isSuccessful)
+                return@withContext Result.failure(Exception("API error ${response.code}"))
+            val arr = JSONObject(body).getJSONArray("groups")
+            Result.success((0 until arr.length()).map { parseGroup(arr.getJSONObject(it)) })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createGroup(
+        idToken: String,
+        groupName: String,
+        groupSlug: String,
+        description: String,
+        visibility: GroupVisibility
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val payload = JSONObject().apply {
+                put("groupName", groupName)
+                put("groupSlug", groupSlug)
+                put("description", description)
+                put("visibilityType", visibility.value)
+            }
+            val request = Request.Builder()
+                .url("${ApiConfig.BASE_URL}/api/v1/groups")
+                .addHeader("Authorization", "Bearer $idToken")
+                .post(payload.toString().toRequestBody(json)).build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+                ?: return@withContext Result.failure(Exception("Empty response"))
+            if (!response.isSuccessful) {
+                val message = runCatching { JSONObject(body).getString("error") }
+                    .getOrDefault("API error ${response.code}")
+                return@withContext Result.failure(Exception(message))
+            }
+            Result.success(JSONObject(body).getString("groupId"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getGroup(idToken: String, groupId: String): Result<Group> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$groupId")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+                Result.success(parseGroup(JSONObject(body)))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /** join / leave のような、結果を持たないグループ操作 */
+    private suspend fun groupAction(idToken: String, path: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$path")
+                    .addHeader("Authorization", "Bearer $idToken")
+                    .post(ByteArray(0).toRequestBody(json)).build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                if (!response.isSuccessful) {
+                    val message = runCatching { JSONObject(body ?: "{}").getString("error") }
+                        .getOrDefault("API error ${response.code}")
+                    return@withContext Result.failure(Exception(message))
+                }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun joinGroup(idToken: String, groupId: String) =
+        groupAction(idToken, "$groupId/join")
+
+    suspend fun leaveGroup(idToken: String, groupId: String) =
+        groupAction(idToken, "$groupId/leave")
+
+    suspend fun getGroupMembers(idToken: String, groupId: String): Result<List<GroupMember>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$groupId/members")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+                val arr = JSONObject(body).getJSONArray("members")
+                Result.success((0 until arr.length()).map {
+                    val m = arr.getJSONObject(it)
+                    GroupMember(
+                        userId = m.getString("userId"),
+                        displayName = m.getString("displayName"),
+                        userName = m.getString("userName"),
+                        profileImageUrl = m.optUrl("profileImageUrl"),
+                        role = m.optString("role", "member"),
+                        joinedAt = formatRelativeTime(m.optString("joinedAt", ""))
+                    )
+                })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun getGroupPosts(idToken: String, groupId: String): Result<List<Post>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$groupId/posts")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+                val arr = JSONObject(body).getJSONArray("posts")
+                Result.success((0 until arr.length()).map { parsePost(arr.getJSONObject(it)) })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    suspend fun createGroupPost(
+        idToken: String,
+        groupId: String,
+        content: String,
+        shareOutside: Boolean = false
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val payload = JSONObject().apply {
+                put("content", content)
+                put("groupVisibility", if (shareOutside) "public" else "members")
+            }
+            val request = Request.Builder()
+                .url("${ApiConfig.BASE_URL}/api/v1/groups/$groupId/posts")
+                .addHeader("Authorization", "Bearer $idToken")
+                .post(payload.toString().toRequestBody(json)).build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+                ?: return@withContext Result.failure(Exception("Empty response"))
+            if (!response.isSuccessful) {
+                val message = runCatching { JSONObject(body).getString("error") }
+                    .getOrDefault("API error ${response.code}")
+                return@withContext Result.failure(Exception(message))
+            }
+            Result.success(JSONObject(body).getString("postId"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     // ---- DM ----
 
@@ -779,6 +975,8 @@ class GrowLogApi {
             postType = j.optString("postType", "progress"),
             tags = tags,
             imageUrl = j.optUrl("imageUrl"),
+            groupId = j.optUrl("groupId"),
+            isPinned = j.optBoolean("isPinned", false),
             progress = if (j.isNull("progress")) null else j.getInt("progress"),
             goalTitle = if (j.isNull("goalTitle")) null else j.getString("goalTitle"),
             reactionCount = j.optInt("reactionCount", 0),

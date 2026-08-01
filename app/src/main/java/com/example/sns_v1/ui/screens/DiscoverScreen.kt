@@ -10,12 +10,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,7 +43,8 @@ import com.example.sns_v1.viewmodel.DiscoverViewModel
 fun DiscoverScreen(
     viewModel: DiscoverViewModel,
     onNavigateToPostDetail: (String) -> Unit = {},
-    onNavigateToUserProfile: (String) -> Unit = {}
+    onNavigateToUserProfile: (String) -> Unit = {},
+    onNavigateToGroups: () -> Unit = {}
 ) {
     val discover by viewModel.discover.collectAsState()
     val query by viewModel.query.collectAsState()
@@ -107,6 +111,39 @@ fun DiscoverScreen(
                         ),
                         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp)
                     )
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(onClick = onNavigateToGroups)
+                            .background(SubBackground)
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Outlined.Group,
+                            contentDescription = null,
+                            tint = Accent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("グループ", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "同じ目標の人が集まる場所を探す",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                        Icon(
+                            Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(14.dp))
                 }
             }

@@ -46,7 +46,7 @@ export const images = new Hono<AppContext>();
 const CACHE_CONTROL = 'private, max-age=31536000, immutable';
 
 images.get('/:key{.+}', authMiddleware, async (c) => {
-  const key = c.req.param('key');
+  const key = c.req.param('key') ?? '';
   // キーは UUID を含み中身が差し替わることはないので、キー自体を etag に使える
   const etag = `"${key}"`;
 

@@ -15,6 +15,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import com.example.sns_v1.ui.screens.CreatePostScreen
 import com.example.sns_v1.ui.screens.DiscoverScreen
+import com.example.sns_v1.ui.screens.GroupDetailScreen
+import com.example.sns_v1.ui.screens.GroupsScreen
 import com.example.sns_v1.ui.screens.EditProfileScreen
 import com.example.sns_v1.ui.screens.HomeScreen
 import com.example.sns_v1.ui.screens.ChatScreen
@@ -29,6 +31,8 @@ import com.example.sns_v1.viewmodel.ChatViewModel
 import com.example.sns_v1.viewmodel.CreatePostViewModel
 import com.example.sns_v1.viewmodel.MessagesViewModel
 import com.example.sns_v1.viewmodel.DiscoverViewModel
+import com.example.sns_v1.viewmodel.GroupDetailViewModel
+import com.example.sns_v1.viewmodel.GroupsViewModel
 import com.example.sns_v1.viewmodel.NotificationsViewModel
 import com.example.sns_v1.viewmodel.PostDetailViewModel
 import com.example.sns_v1.viewmodel.PostsViewModel
@@ -91,12 +95,39 @@ fun GrowLogNavGraph(
                 }
             )
         }
+        composable(Route.Groups.route) {
+            val viewModel: GroupsViewModel = viewModel()
+            GroupsScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onOpenGroup = { id -> navController.navigate(Route.GroupDetail.createRoute(id)) }
+            )
+        }
+        composable(
+            route = Route.GroupDetail.route,
+            arguments = listOf(navArgument("groupId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val groupId = backStackEntry.arguments?.getString("groupId") ?: ""
+            val viewModel: GroupDetailViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    @Suppress("UNCHECKED_CAST")
+                    return GroupDetailViewModel(groupId) as T
+                }
+            })
+            GroupDetailScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToPostDetail = { postId -> navController.navigate(Route.PostDetail.createRoute(postId)) },
+                onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) }
+            )
+        }
         composable(Route.Discover.route) {
             val viewModel: DiscoverViewModel = viewModel()
             DiscoverScreen(
                 viewModel = viewModel,
                 onNavigateToPostDetail = { postId -> navController.navigate(Route.PostDetail.createRoute(postId)) },
-                onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) }
+                onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) },
+                onNavigateToGroups = { navController.navigate(Route.Groups.route) }
             )
         }
         composable(Route.CreatePost.route) {

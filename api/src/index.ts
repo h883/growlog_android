@@ -11,6 +11,7 @@ import notificationRoutes from './routes/notifications';
 import uploadRoutes, { images as imageRoutes } from './routes/uploads';
 import discoverRoutes from './routes/discover';
 import messageRoutes from './routes/messages';
+import groupRoutes from './routes/groups';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -34,6 +35,7 @@ app.route('/api/v1/users', followRoutes);
 app.route('/api/v1/notifications', notificationRoutes);
 app.route('/api/v1/discover', discoverRoutes);
 app.route('/api/v1/conversations', messageRoutes);
+app.route('/api/v1/groups', groupRoutes);
 app.route('/api/v1/uploads', uploadRoutes);
 app.route('/api/v1/images', imageRoutes);
 
