@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Stitch の起動画面と同じ、何も表示しない淡いピンクの起動ウィンドウ。 -->
+    <style name="Theme.SNSV1" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFFFF8F6</item>
+        <item name="android:colorAccent">#FFBF351D</item>
+        <item name="android:statusBarColor">#FFFFF8F6</item>
+        <item name="android:navigationBarColor">#FFFFF8F6</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

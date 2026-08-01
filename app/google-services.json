@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "22332816393",
+    "project_id": "growlog-6cf61",
+    "storage_bucket": "growlog-6cf61.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:22332816393:android:3a6d7c05eb00c8b84e0cd8",
+        "android_client_info": {
+          "package_name": "com.example.sns_v1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "22332816393-sm5gftl76bt9p3shj3cgftuts9220t84.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.sns_v1",
+            "certificate_hash": "68c0b92398bec599fd289204231a25dd95bf7f7f"
+          }
+        },
+        {
+          "client_id": "22332816393-984lkomnjqum3s3d492godf55tav8b0o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeOlEyGPuptTwjfu5AXdrJ4BR0-frt-Io"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "22332816393-984lkomnjqum3s3d492godf55tav8b0o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

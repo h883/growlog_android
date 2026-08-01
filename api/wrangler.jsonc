@@ -1,0 +1,21 @@
+{
+  "name": "growlog-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-18",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "growlog-db",
+      "database_id": "4db67004-9d59-4088-96d2-3999ffd15b57"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "MEDIA",
+      "id": "b9fd96dd1c6c4525bb13d04a9c00eb97"
+    }
+  ],
+  "vars": {
+    "FIREBASE_PROJECT_ID": "growlog-6cf61"
+  }
+}
