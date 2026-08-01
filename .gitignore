@@ -13,3 +13,5 @@
 .externalNativeBuild
 .cxx
 local.properties
+# Kotlin コンパイラが吐くログ。成果物ではないので追跡しない
+.kotlin/
