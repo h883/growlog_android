@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,11 +19,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sns_v1.model.Goal
 import com.example.sns_v1.ui.components.AppCard
+import com.example.sns_v1.ui.components.ProgressRow
 import com.example.sns_v1.ui.components.CreateGoalDialog
 import com.example.sns_v1.ui.components.GoalCard
 import com.example.sns_v1.ui.components.GrowLogTopBar
@@ -214,6 +218,14 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                     }
+
+                    if (activeGoals.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(18.dp))
+                        ActiveGoalsProgress(
+                            goals = activeGoals,
+                            onSeeAll = { selectedTab = 1 }
+                        )
+                    }
                 }
 
                 Surface(color = MaterialTheme.colorScheme.surface) {
@@ -326,6 +338,74 @@ private fun CountLabel(value: String, label: String) {
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.width(4.dp))
         Text(label, fontSize = 12.sp, color = TextSecondary)
+    }
+}
+
+private const val GOALS_SHOWN_IN_HEADER = 3
+
+/**
+ * 挑戦中の目標の進み具合をプロフィール上部に出す。
+ * 全体の平均を大きく見せたうえで、内訳を数件だけ並べる。
+ */
+@Composable
+private fun ActiveGoalsProgress(
+    goals: List<Goal>,
+    onSeeAll: () -> Unit
+) {
+    // 目標ごとの進捗を単純平均したものを「全体」として扱う
+    val overall = remember(goals) {
+        if (goals.isEmpty()) 0 else goals.sumOf { it.progress } / goals.size
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "挑戦中の進捗",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$overall%",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Accent
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = if (goals.size == 1) "目標1件の進み具合" else "目標${goals.size}件の平均",
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+        goals.take(GOALS_SHOWN_IN_HEADER).forEachIndexed { index, goal ->
+            if (index > 0) Spacer(modifier = Modifier.height(12.dp))
+            ProgressRow(label = goal.title, progress = goal.progress)
+        }
+
+        if (goals.size > GOALS_SHOWN_IN_HEADER) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "他${goals.size - GOALS_SHOWN_IN_HEADER}件を見る",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Accent,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable(onClick = onSeeAll)
+                    .padding(vertical = 4.dp)
+            )
+        }
     }
 }
 
