@@ -23,7 +23,7 @@ notifications.get('/', authMiddleware, async (c) => {
      JOIN users a ON n.actor_id = a.user_id
      LEFT JOIN posts p ON n.post_id = p.post_id
      LEFT JOIN comments cm ON n.comment_id = cm.comment_id
-     WHERE n.user_id = ?
+     WHERE n.user_id = ? AND n.is_deferred = 0
      ORDER BY n.created_at DESC
      LIMIT 50`
   ).bind(me.user_id).all();

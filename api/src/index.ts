@@ -12,6 +12,7 @@ import uploadRoutes, { images as imageRoutes } from './routes/uploads';
 import discoverRoutes from './routes/discover';
 import messageRoutes from './routes/messages';
 import groupRoutes from './routes/groups';
+import focusRoutes, { focusRoom } from './routes/focus';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -36,6 +37,8 @@ app.route('/api/v1/notifications', notificationRoutes);
 app.route('/api/v1/discover', discoverRoutes);
 app.route('/api/v1/conversations', messageRoutes);
 app.route('/api/v1/groups', groupRoutes);
+app.route('/api/v1/groups', focusRoom);
+app.route('/api/v1/focus-sessions', focusRoutes);
 app.route('/api/v1/uploads', uploadRoutes);
 app.route('/api/v1/images', imageRoutes);
 

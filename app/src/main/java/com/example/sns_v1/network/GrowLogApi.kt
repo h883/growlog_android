@@ -6,6 +6,10 @@ import com.example.sns_v1.model.Notification
 import com.example.sns_v1.model.ChatThread
 import com.example.sns_v1.model.Conversation
 import com.example.sns_v1.model.DiscoverData
+import com.example.sns_v1.model.FocusMode
+import com.example.sns_v1.model.FocusRoom
+import com.example.sns_v1.model.FocusSession
+import com.example.sns_v1.model.FocusVisibility
 import com.example.sns_v1.model.Group
 import com.example.sns_v1.model.GroupMember
 import com.example.sns_v1.model.GroupVisibility
@@ -363,6 +367,154 @@ class GrowLogApi {
                 Result.success(SearchResult(
                     posts = (0 until postsArr.length()).map { parsePost(postsArr.getJSONObject(it)) },
                     users = (0 until usersArr.length()).map { parseUserSummary(usersArr.getJSONObject(it)) }
+                ))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    // ---- 集中ステータス ----
+
+    private fun parseFocusSession(j: JSONObject) = FocusSession(
+        focusSessionId = j.getString("focusSessionId"),
+        userId = j.getString("userId"),
+        displayName = j.getString("displayName"),
+        userName = j.getString("userName"),
+        profileImageUrl = j.optUrl("profileImageUrl"),
+        activityTitle = j.getString("activityTitle"),
+        goalTitle = j.optUrl("goalTitle"),
+        groupId = j.optUrl("groupId"),
+        status = j.optString("status", "active"),
+        visibility = FocusVisibility.from(j.optString("visibilityType")),
+        focusMode = FocusMode.from(j.optString("focusMode")),
+        plannedDurationSeconds = if (j.isNull("plannedDurationSeconds")) null
+                                 else j.optInt("plannedDurationSeconds"),
+        actualDurationSeconds = if (j.isNull("actualDurationSeconds")) null
+                                else j.optInt("actualDurationSeconds"),
+        elapsedSeconds = j.optInt("elapsedSeconds", 0),
+        breakCount = j.optInt("breakCount", 0),
+        cheerCount = j.optInt("cheerCount", 0),
+        myReactions = j.optJSONArray("myReactions")?.let { arr ->
+            (0 until arr.length()).map { arr.getString(it) }
+        } ?: emptyList()
+    )
+
+    suspend fun startFocusSession(
+        idToken: String,
+        activityTitle: String,
+        goalId: String? = null,
+        groupId: String? = null,
+        plannedDurationSeconds: Int? = null,
+        visibility: FocusVisibility = FocusVisibility.FOLLOWERS,
+        mode: FocusMode = FocusMode.LIGHT
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val payload = JSONObject().apply {
+                put("activityTitle", activityTitle)
+                if (goalId != null) put("goalId", goalId)
+                if (groupId != null) put("groupId", groupId)
+                if (plannedDurationSeconds != null) put("plannedDurationSeconds", plannedDurationSeconds)
+                put("visibilityType", visibility.value)
+                put("focusMode", mode.value)
+            }
+            val request = Request.Builder()
+                .url("${ApiConfig.BASE_URL}/api/v1/focus-sessions")
+                .addHeader("Authorization", "Bearer $idToken")
+                .post(payload.toString().toRequestBody(json)).build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string()
+                ?: return@withContext Result.failure(Exception("Empty response"))
+            if (!response.isSuccessful) {
+                val message = runCatching { JSONObject(body).getString("error") }
+                    .getOrDefault("API error ${response.code}")
+                return@withContext Result.failure(Exception(message))
+            }
+            Result.success(JSONObject(body).getString("focusSessionId"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getActiveFocusSessions(idToken: String): Result<List<FocusSession>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/focus-sessions/active")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+                val arr = JSONObject(body).getJSONArray("sessions")
+                Result.success((0 until arr.length()).map { parseFocusSession(arr.getJSONObject(it)) })
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /** pause / resume のような、本文を持たないセッション操作 */
+    private suspend fun focusAction(idToken: String, path: String, payload: JSONObject? = null):
+        Result<JSONObject> = withContext(Dispatchers.IO) {
+        try {
+            val bodyContent = (payload ?: JSONObject()).toString().toRequestBody(json)
+            val request = Request.Builder()
+                .url("${ApiConfig.BASE_URL}/api/v1/focus-sessions/$path")
+                .addHeader("Authorization", "Bearer $idToken")
+                .post(bodyContent).build()
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: "{}"
+            if (!response.isSuccessful) {
+                val message = runCatching { JSONObject(body).getString("error") }
+                    .getOrDefault("API error ${response.code}")
+                return@withContext Result.failure(Exception(message))
+            }
+            Result.success(JSONObject(body))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun pauseFocusSession(idToken: String, sessionId: String) =
+        focusAction(idToken, "$sessionId/pause")
+
+    suspend fun resumeFocusSession(idToken: String, sessionId: String) =
+        focusAction(idToken, "$sessionId/resume")
+
+    suspend fun completeFocusSession(
+        idToken: String,
+        sessionId: String,
+        reflection: String? = null,
+        concentrationRating: Int? = null
+    ) = focusAction(idToken, "$sessionId/complete", JSONObject().apply {
+        if (reflection != null) put("reflection", reflection)
+        if (concentrationRating != null) put("concentrationRating", concentrationRating)
+    })
+
+    suspend fun cancelFocusSession(idToken: String, sessionId: String, endReason: String? = null) =
+        focusAction(idToken, "$sessionId/cancel", JSONObject().apply {
+            if (endReason != null) put("endReason", endReason)
+        })
+
+    suspend fun sendFocusReaction(idToken: String, sessionId: String, reactionType: String = "cheer") =
+        focusAction(idToken, "$sessionId/reactions", JSONObject().put("reactionType", reactionType))
+
+    suspend fun getFocusRoom(idToken: String, groupId: String): Result<FocusRoom> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$groupId/focus-room")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+                val j = JSONObject(body)
+                val arr = j.getJSONArray("activeSessions")
+                Result.success(FocusRoom(
+                    activeSessions = (0 until arr.length()).map { parseFocusSession(arr.getJSONObject(it)) },
+                    todayTotalSeconds = j.optInt("todayTotalSeconds", 0)
                 ))
             } catch (e: Exception) {
                 Result.failure(e)

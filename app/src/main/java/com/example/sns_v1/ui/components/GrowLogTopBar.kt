@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.MailOutline
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
@@ -29,6 +30,7 @@ fun GrowLogTopBar(
     onSearchClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onMessagesClick: (() -> Unit)? = null,
+    onFocusClick: (() -> Unit)? = null,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     Surface(
@@ -56,6 +58,9 @@ fun GrowLogTopBar(
             if (actions != null) {
                 actions()
             } else {
+                if (onFocusClick != null) {
+                    TopBarIcon(Icons.Outlined.LocalFireDepartment, "集中", onFocusClick)
+                }
                 TopBarIcon(Icons.Outlined.Search, "検索", onSearchClick)
                 if (onMessagesClick != null) {
                     TopBarIcon(Icons.Outlined.MailOutline, "メッセージ", onMessagesClick)

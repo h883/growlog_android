@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
+import { deferredFlag } from '../focus-state';
 
 const posts = new Hono<AppContext>();
 
@@ -167,9 +168,10 @@ posts.post('/:postId/reactions', authMiddleware, async (c) => {
     if (postOwner && postOwner.user_id !== me.user_id) {
       const notifId = crypto.randomUUID();
       await c.env.DB.prepare(
-        `INSERT INTO notifications (notification_id, user_id, type, actor_id, post_id, created_at)
-         VALUES (?, ?, 'reaction', ?, ?, ?)`
-      ).bind(notifId, postOwner.user_id, me.user_id, postId, now).run();
+        `INSERT INTO notifications (notification_id, user_id, type, actor_id, post_id, is_deferred, created_at)
+         VALUES (?, ?, 'reaction', ?, ?, ?, ?)`
+      ).bind(notifId, postOwner.user_id, me.user_id, postId,
+        await deferredFlag(c, postOwner.user_id), now).run();
     }
   }
 

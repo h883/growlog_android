@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
+import { deferredFlag } from '../focus-state';
 
 const comments = new Hono<AppContext>();
 
@@ -65,9 +66,10 @@ comments.post('/:postId/comments', authMiddleware, async (c) => {
   if (post.user_id !== me.user_id) {
     const notifId = crypto.randomUUID();
     await c.env.DB.prepare(
-      `INSERT INTO notifications (notification_id, user_id, type, actor_id, post_id, comment_id, created_at)
-       VALUES (?, ?, 'comment', ?, ?, ?, ?)`
-    ).bind(notifId, post.user_id, me.user_id, postId, commentId, now).run();
+      `INSERT INTO notifications (notification_id, user_id, type, actor_id, post_id, comment_id, is_deferred, created_at)
+       VALUES (?, ?, 'comment', ?, ?, ?, ?, ?)`
+    ).bind(notifId, post.user_id, me.user_id, postId, commentId,
+      await deferredFlag(c, post.user_id), now).run();
   }
 
   return c.json({ commentId, createdAt: now }, 201);

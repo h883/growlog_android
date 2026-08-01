@@ -27,7 +27,8 @@ fun HomeScreen(
     onNavigateToPostDetail: (String) -> Unit = {},
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToDiscover: () -> Unit = {},
-    onNavigateToMessages: () -> Unit = {}
+    onNavigateToMessages: () -> Unit = {},
+    onNavigateToFocus: () -> Unit = {}
 ) {
     val tabs = listOf("おすすめ" to Feed.POPULAR, "フォロー中" to Feed.FOLLOWING, "最新" to Feed.LATEST)
 
@@ -45,7 +46,8 @@ fun HomeScreen(
         // DM はメニューバーから開けるので、ヘッダーにはメールアイコンを置かない
         GrowLogTopBar(
             onSearchClick = onNavigateToDiscover,
-            onNotificationsClick = onNavigateToNotifications
+            onNotificationsClick = onNavigateToNotifications,
+            onFocusClick = onNavigateToFocus
         )
 
         Surface(color = MaterialTheme.colorScheme.surface) {

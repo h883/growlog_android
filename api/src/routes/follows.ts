@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
+import { deferredFlag } from '../focus-state';
 import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
 
 const follows = new Hono<AppContext>();
@@ -44,9 +45,10 @@ follows.post('/:userName/follow', authMiddleware, async (c) => {
 
     const notifId = crypto.randomUUID();
     await c.env.DB.prepare(
-      `INSERT INTO notifications (notification_id, user_id, type, actor_id, created_at)
-       VALUES (?, ?, 'follow', ?, ?)`
-    ).bind(notifId, target.user_id, me.user_id, now).run();
+      `INSERT INTO notifications (notification_id, user_id, type, actor_id, is_deferred, created_at)
+       VALUES (?, ?, 'follow', ?, ?, ?)`
+    ).bind(notifId, target.user_id, me.user_id,
+      await deferredFlag(c, target.user_id), now).run();
   }
 
   return c.json({ following });
@@ -75,6 +77,12 @@ follows.get('/:userName/profile', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM goals WHERE user_id = ?').bind(user.user_id).first<{ cnt: number }>(),
   ]);
 
+  // 集中中なら、コメントやDMを送る側に「通知は終了後に届く」と伝えられるようにする
+  const focusRow = await c.env.DB.prepare(
+    `SELECT activity_title FROM focus_sessions
+     WHERE user_id = ? AND status IN ('active', 'paused')`
+  ).bind(user.user_id).first<{ activity_title: string }>();
+
   return c.json({
     userId: user.user_id,
     displayName: user.display_name,
@@ -86,6 +94,8 @@ follows.get('/:userName/profile', authMiddleware, async (c) => {
     isFollowing: !!isFollowingRow,
     postCount: postCountRow?.cnt ?? 0,
     goalCount: goalCountRow?.cnt ?? 0,
+    isFocusing: focusRow !== null,
+    focusActivityTitle: focusRow?.activity_title ?? null,
   });
 });
 

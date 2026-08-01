@@ -10,6 +10,7 @@ sealed class Route(val route: String) {
     object EditProfile : Route("profile/edit")
     object Settings : Route("settings")
     object Messages : Route("messages")
+    object Focus : Route("focus")
     object Groups : Route("groups")
     object GroupDetail : Route("groups/{groupId}") {
         fun createRoute(groupId: String) = "groups/$groupId"

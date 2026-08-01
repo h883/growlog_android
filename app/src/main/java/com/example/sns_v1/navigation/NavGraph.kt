@@ -18,6 +18,7 @@ import com.example.sns_v1.ui.screens.DiscoverScreen
 import com.example.sns_v1.ui.screens.GroupDetailScreen
 import com.example.sns_v1.ui.screens.GroupsScreen
 import com.example.sns_v1.ui.screens.EditProfileScreen
+import com.example.sns_v1.ui.screens.FocusScreen
 import com.example.sns_v1.ui.screens.HomeScreen
 import com.example.sns_v1.ui.screens.ChatScreen
 import com.example.sns_v1.ui.screens.LoginScreen
@@ -31,6 +32,7 @@ import com.example.sns_v1.viewmodel.ChatViewModel
 import com.example.sns_v1.viewmodel.CreatePostViewModel
 import com.example.sns_v1.viewmodel.MessagesViewModel
 import com.example.sns_v1.viewmodel.DiscoverViewModel
+import com.example.sns_v1.viewmodel.FocusViewModel
 import com.example.sns_v1.viewmodel.GroupDetailViewModel
 import com.example.sns_v1.viewmodel.GroupsViewModel
 import com.example.sns_v1.viewmodel.NotificationsViewModel
@@ -65,7 +67,8 @@ fun GrowLogNavGraph(
                 onNavigateToPostDetail = { postId -> navController.navigate(Route.PostDetail.createRoute(postId)) },
                 onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) },
                 onNavigateToDiscover = { navController.navigate(Route.Discover.route) },
-                onNavigateToMessages = { navController.navigate(Route.Messages.route) }
+                onNavigateToMessages = { navController.navigate(Route.Messages.route) },
+                onNavigateToFocus = { navController.navigate(Route.Focus.route) }
             )
         }
         composable(Route.Messages.route) {
@@ -93,6 +96,14 @@ fun GrowLogNavGraph(
                 onNavigateToUserProfile = { userName ->
                     navController.navigate(Route.UserProfile.createRoute(userName))
                 }
+            )
+        }
+        composable(Route.Focus.route) {
+            val viewModel: FocusViewModel = viewModel()
+            FocusScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() },
+                onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) }
             )
         }
         composable(Route.Groups.route) {
