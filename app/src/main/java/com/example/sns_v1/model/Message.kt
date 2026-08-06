@@ -9,7 +9,9 @@ data class Conversation(
     val partnerImageUrl: String? = null,
     val lastMessage: String? = null,
     val lastMessageAt: String? = null,
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    /** 相手がいま集中していれば入る */
+    val partnerFocus: FocusPresence? = null
 )
 
 data class Message(

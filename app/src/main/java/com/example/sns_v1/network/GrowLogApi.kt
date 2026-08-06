@@ -7,9 +7,13 @@ import com.example.sns_v1.model.ChatThread
 import com.example.sns_v1.model.Conversation
 import com.example.sns_v1.model.DiscoverData
 import com.example.sns_v1.model.FocusMode
+import com.example.sns_v1.model.FocusPresence
 import com.example.sns_v1.model.FocusRoom
 import com.example.sns_v1.model.FocusSession
 import com.example.sns_v1.model.FocusVisibility
+import com.example.sns_v1.model.Garden
+import com.example.sns_v1.model.GardenPlant
+import com.example.sns_v1.model.GardenTheme
 import com.example.sns_v1.model.Group
 import com.example.sns_v1.model.GroupMember
 import com.example.sns_v1.model.GroupVisibility
@@ -392,6 +396,10 @@ class GrowLogApi {
         actualDurationSeconds = if (j.isNull("actualDurationSeconds")) null
                                 else j.optInt("actualDurationSeconds"),
         elapsedSeconds = j.optInt("elapsedSeconds", 0),
+        gardenTheme = GardenTheme.from(j.optString("gardenTheme")),
+        gardenStage = j.optInt("gardenStage", 0),
+        secondsToNextStage = if (j.isNull("secondsToNextStage")) null
+                             else j.optInt("secondsToNextStage"),
         breakCount = j.optInt("breakCount", 0),
         cheerCount = j.optInt("cheerCount", 0),
         myReactions = j.optJSONArray("myReactions")?.let { arr ->
@@ -406,7 +414,8 @@ class GrowLogApi {
         groupId: String? = null,
         plannedDurationSeconds: Int? = null,
         visibility: FocusVisibility = FocusVisibility.FOLLOWERS,
-        mode: FocusMode = FocusMode.LIGHT
+        mode: FocusMode = FocusMode.LIGHT,
+        gardenTheme: GardenTheme = GardenTheme.PLANT
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val payload = JSONObject().apply {
@@ -416,6 +425,7 @@ class GrowLogApi {
                 if (plannedDurationSeconds != null) put("plannedDurationSeconds", plannedDurationSeconds)
                 put("visibilityType", visibility.value)
                 put("focusMode", mode.value)
+                put("gardenTheme", gardenTheme.value)
             }
             val request = Request.Builder()
                 .url("${ApiConfig.BASE_URL}/api/v1/focus-sessions")
@@ -514,7 +524,45 @@ class GrowLogApi {
                 val arr = j.getJSONArray("activeSessions")
                 Result.success(FocusRoom(
                     activeSessions = (0 until arr.length()).map { parseFocusSession(arr.getJSONObject(it)) },
-                    todayTotalSeconds = j.optInt("todayTotalSeconds", 0)
+                    todayTotalSeconds = j.optInt("todayTotalSeconds", 0),
+                    monthGrownCount = j.optInt("monthGrownCount", 0),
+                    monthTotalSeconds = j.optInt("monthTotalSeconds", 0),
+                    monthMemberCount = j.optInt("monthMemberCount", 0)
+                ))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
+    /** 今週の庭。[userName] を省略すると自分の庭 */
+    suspend fun getGarden(idToken: String, userName: String? = null): Result<Garden> =
+        withContext(Dispatchers.IO) {
+            try {
+                val suffix = if (userName != null) "/$userName" else ""
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/focus-sessions/garden$suffix")
+                    .addHeader("Authorization", "Bearer $idToken").get().build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                    ?: return@withContext Result.failure(Exception("Empty response"))
+                if (!response.isSuccessful)
+                    return@withContext Result.failure(Exception("API error ${response.code}"))
+
+                val j = JSONObject(body)
+                val arr = j.getJSONArray("plants")
+                Result.success(Garden(
+                    sessionCount = j.optInt("sessionCount", 0),
+                    totalSeconds = j.optInt("totalSeconds", 0),
+                    plants = (0 until arr.length()).map {
+                        val p = arr.getJSONObject(it)
+                        GardenPlant(
+                            focusSessionId = p.getString("focusSessionId"),
+                            activityTitle = p.optString("activityTitle", ""),
+                            gardenTheme = GardenTheme.from(p.optString("gardenTheme")),
+                            gardenStage = p.optInt("gardenStage", 0),
+                            durationSeconds = p.optInt("durationSeconds", 0)
+                        )
+                    }
                 ))
             } catch (e: Exception) {
                 Result.failure(e)
@@ -639,6 +687,32 @@ class GrowLogApi {
     suspend fun leaveGroup(idToken: String, groupId: String) =
         groupAction(idToken, "$groupId/leave")
 
+    private suspend fun groupJsonAction(idToken: String, path: String, payload: JSONObject): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val request = Request.Builder()
+                    .url("${ApiConfig.BASE_URL}/api/v1/groups/$path")
+                    .addHeader("Authorization", "Bearer $idToken")
+                    .post(payload.toString().toRequestBody(json)).build()
+                val response = client.newCall(request).execute()
+                val body = response.body?.string()
+                if (!response.isSuccessful) {
+                    val message = runCatching { JSONObject(body ?: "{}").getString("error") }.getOrDefault("API error ${response.code}")
+                    return@withContext Result.failure(Exception(message))
+                }
+                Result.success(Unit)
+            } catch (e: Exception) { Result.failure(e) }
+        }
+
+    suspend fun inviteToGroup(idToken: String, groupId: String, userName: String) =
+        groupJsonAction(idToken, "$groupId/invitations", JSONObject().put("userName", userName))
+
+    suspend fun decideGroupJoinRequest(idToken: String, groupId: String, requestId: String, approve: Boolean) =
+        groupJsonAction(idToken, "$groupId/join-requests/$requestId/decision", JSONObject().put("approve", approve))
+
+    suspend fun decideGroupInvitation(idToken: String, groupId: String, invitationId: String, accept: Boolean) =
+        groupJsonAction(idToken, "$groupId/invitations/$invitationId/decision", JSONObject().put("accept", accept))
+
     suspend fun getGroupMembers(idToken: String, groupId: String): Result<List<GroupMember>> =
         withContext(Dispatchers.IO) {
             try {
@@ -741,7 +815,8 @@ class GrowLogApi {
                         lastMessage = if (j.isNull("lastMessage")) null else j.getString("lastMessage"),
                         lastMessageAt = if (j.isNull("lastMessageAt")) null
                                         else formatRelativeTime(j.getString("lastMessageAt")),
-                        unreadCount = j.optInt("unreadCount", 0)
+                        unreadCount = j.optInt("unreadCount", 0),
+                        partnerFocus = j.optPresence("partnerFocus")
                     )
                 })
             } catch (e: Exception) {
@@ -1030,7 +1105,8 @@ class GrowLogApi {
                     followingCount = j.optInt("followingCount", 0),
                     isFollowing = j.optBoolean("isFollowing", false),
                     postCount = j.optInt("postCount", 0),
-                    goalCount = j.optInt("goalCount", 0)
+                    goalCount = j.optInt("goalCount", 0),
+                    focus = j.optPresence("focus")
                 ))
             } catch (e: Exception) { Result.failure(e) }
         }
@@ -1081,6 +1157,20 @@ class GrowLogApi {
     private fun JSONObject.optUrl(name: String): String? =
         if (isNull(name)) null else optString(name).ifBlank { null }
 
+    /** 集中していなければサーバーは null を返すので、そのまま null にする */
+    private fun JSONObject.optPresence(name: String): FocusPresence? {
+        if (isNull(name)) return null
+        val p = optJSONObject(name) ?: return null
+        return FocusPresence(
+            focusSessionId = p.optString("focusSessionId", ""),
+            status = p.optString("status", "active"),
+            activityTitle = p.optString("activityTitle", ""),
+            elapsedSeconds = p.optInt("elapsedSeconds", 0),
+            gardenTheme = GardenTheme.from(p.optString("gardenTheme")),
+            gardenStage = p.optInt("gardenStage", 0)
+        )
+    }
+
     private fun parseUserSummary(j: JSONObject) = UserSummary(
         userId = j.getString("userId"),
         displayName = j.getString("displayName"),
@@ -1109,6 +1199,10 @@ class GrowLogApi {
         postId = if (j.isNull("postId")) null else j.getString("postId"),
         postContent = if (j.isNull("postContent")) null else j.getString("postContent"),
         commentContent = if (j.isNull("commentContent")) null else j.getString("commentContent"),
+        groupId = j.optUrl("groupId"),
+        groupName = if (j.isNull("groupName")) null else j.optString("groupName").ifBlank { null },
+        groupJoinRequestId = if (j.isNull("groupJoinRequestId")) null else j.optString("groupJoinRequestId").ifBlank { null },
+        groupInvitationId = if (j.isNull("groupInvitationId")) null else j.optString("groupInvitationId").ifBlank { null },
         isRead = j.optBoolean("isRead", false),
         createdAt = formatRelativeTime(j.optString("createdAt", ""))
     )
@@ -1135,6 +1229,7 @@ class GrowLogApi {
             commentCount = j.optInt("commentCount", 0),
             myReaction = j.optBoolean("myReaction", false),
             isSaved = j.optBoolean("isSaved", false),
+            authorFocus = j.optPresence("authorFocus"),
             createdAt = formatRelativeTime(j.optString("createdAt", ""))
         )
     }

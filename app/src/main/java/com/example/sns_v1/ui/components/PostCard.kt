@@ -58,17 +58,22 @@ fun PostCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 5.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable(onClick = onPostClick)
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
     ) {
-        UserAvatar(
-            displayName = post.displayName,
-            imageUrl = post.authorImageUrl,
-            size = 40.dp,
-            fontSize = 16.sp,
-            modifier = Modifier.clickable(onClick = onAuthorClick)
-        )
+        Box(modifier = Modifier.clickable(onClick = onAuthorClick)) {
+            UserAvatar(
+                displayName = post.displayName,
+                imageUrl = post.authorImageUrl,
+                size = 40.dp,
+                fontSize = 16.sp
+            )
+            // 集中中なら、アバターの右下に点を重ねる
+            FocusAvatarIndicator(post.authorFocus)
+        }
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
@@ -83,6 +88,10 @@ fun PostCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
+                if (post.authorFocus != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    FocusMiniBadge(post.authorFocus)
+                }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "@${post.userName} · ${post.createdAt}",
@@ -179,7 +188,6 @@ fun PostCard(
             }
         }
     }
-    HorizontalDivider(color = BorderColor, thickness = 1.dp)
 }
 
 @Composable

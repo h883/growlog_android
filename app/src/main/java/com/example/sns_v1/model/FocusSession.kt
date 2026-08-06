@@ -42,9 +42,27 @@ data class FocusSession(
     val elapsedSeconds: Int = 0,
     val breakCount: Int = 0,
     val cheerCount: Int = 0,
-    val myReactions: List<String> = emptyList()
+    val myReactions: List<String> = emptyList(),
+    val gardenTheme: GardenTheme = GardenTheme.PLANT,
+    /** 0〜5。サーバーが確定させる */
+    val gardenStage: Int = 0,
+    /** 次の段階までの残り秒。最終段階なら null */
+    val secondsToNextStage: Int? = null
 ) {
     val isPaused: Boolean get() = status == "paused"
+
+    val stageEmoji: String get() = gardenTheme.emoji(gardenStage)
+    val stageName: String get() = gardenTheme.stageName(gardenStage)
+
+    /** 一覧やバッジに使う、軽量な表示用の形へ落とす */
+    fun toPresence() = FocusPresence(
+        focusSessionId = focusSessionId,
+        status = status,
+        activityTitle = activityTitle,
+        elapsedSeconds = elapsedSeconds,
+        gardenTheme = gardenTheme,
+        gardenStage = gardenStage
+    )
 
     /** 予定時間に対する進捗。予定が無ければ null */
     fun progressPercent(elapsed: Int): Int? {
@@ -54,9 +72,54 @@ data class FocusSession(
     }
 }
 
+/**
+ * 集中画面の外（タイムライン・プロフィール・DM一覧）に出す軽量なステータス。
+ * Discord の「〜をプレイ中」に相当する。公開範囲の判定はサーバー側で済んでいる。
+ */
+data class FocusPresence(
+    val focusSessionId: String,
+    /** active / paused */
+    val status: String,
+    val activityTitle: String,
+    val elapsedSeconds: Int = 0,
+    val gardenTheme: GardenTheme = GardenTheme.PLANT,
+    val gardenStage: Int = 0
+) {
+    val isPaused: Boolean get() = status == "paused"
+
+    /** 「集中中」「休憩中」 */
+    val label: String get() = if (isPaused) "休憩中" else "集中中"
+
+    val stageEmoji: String get() = gardenTheme.emoji(gardenStage)
+
+    /** 「若葉が育っています」 */
+    val stageSentence: String get() = gardenTheme.stageSentence(gardenStage)
+}
+
+/** 「今週の庭」に並べる1件 */
+data class GardenPlant(
+    val focusSessionId: String,
+    val activityTitle: String,
+    val gardenTheme: GardenTheme,
+    val gardenStage: Int,
+    val durationSeconds: Int
+) {
+    val emoji: String get() = gardenTheme.emoji(gardenStage)
+}
+
+data class Garden(
+    val sessionCount: Int = 0,
+    val totalSeconds: Int = 0,
+    val plants: List<GardenPlant> = emptyList()
+)
+
 data class FocusRoom(
     val activeSessions: List<FocusSession> = emptyList(),
-    val todayTotalSeconds: Int = 0
+    val todayTotalSeconds: Int = 0,
+    /** 今月メンバー全員で育てた本数。共同の森として見せる */
+    val monthGrownCount: Int = 0,
+    val monthTotalSeconds: Int = 0,
+    val monthMemberCount: Int = 0
 )
 
 /** 秒を 01:24:36 形式にする */

@@ -28,6 +28,8 @@ import com.example.sns_v1.ui.screens.PostDetailScreen
 import com.example.sns_v1.ui.screens.ProfileScreen
 import com.example.sns_v1.ui.screens.SettingsScreen
 import com.example.sns_v1.ui.screens.UserProfileScreen
+import com.example.sns_v1.ui.screens.GoalListScreen
+import com.example.sns_v1.ui.screens.GoalDetailScreen
 import com.example.sns_v1.viewmodel.ChatViewModel
 import com.example.sns_v1.viewmodel.CreatePostViewModel
 import com.example.sns_v1.viewmodel.MessagesViewModel
@@ -150,7 +152,11 @@ fun GrowLogNavGraph(
             )
         }
         composable(Route.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() }, onLogout = onLogout)
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = onLogout,
+                onEditProfile = { navController.navigate(Route.EditProfile.route) }
+            )
         }
         composable(Route.Notifications.route) {
             val viewModel: NotificationsViewModel = viewModel()
@@ -164,8 +170,22 @@ fun GrowLogNavGraph(
                 onNavigateToUserProfile = { userName -> navController.navigate(Route.UserProfile.createRoute(userName)) },
                 onNavigateToEditProfile = { navController.navigate(Route.EditProfile.route) },
                 onNavigateToSettings = { navController.navigate(Route.Settings.route) },
-                onNavigateToDiscover = { navController.navigate(Route.Discover.route) }
+                onNavigateToDiscover = { navController.navigate(Route.Discover.route) },
+                onNavigateToGoals = { navController.navigate(Route.Goals.route) }
             )
+        }
+        composable(Route.Goals.route) { backStackEntry ->
+            val profileEntry = remember(backStackEntry) { navController.getBackStackEntry(Route.Profile.route) }
+            val viewModel: ProfileViewModel = viewModel(viewModelStoreOwner = profileEntry)
+            GoalListScreen(viewModel, onBack = { navController.popBackStack() }, onOpenGoal = { id -> navController.navigate(Route.GoalDetail.createRoute(id)) })
+        }
+        composable(
+            route = Route.GoalDetail.route,
+            arguments = listOf(navArgument("goalId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val profileEntry = remember(backStackEntry) { navController.getBackStackEntry(Route.Profile.route) }
+            val viewModel: ProfileViewModel = viewModel(viewModelStoreOwner = profileEntry)
+            GoalDetailScreen(viewModel, backStackEntry.arguments?.getString("goalId") ?: "", onBack = { navController.popBackStack() })
         }
         composable(Route.EditProfile.route) { backStackEntry ->
             // 編集結果をプロフィール画面へそのまま反映したいので ViewModel を共有する

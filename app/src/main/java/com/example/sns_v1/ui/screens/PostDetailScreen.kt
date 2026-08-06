@@ -31,6 +31,8 @@ import coil.compose.AsyncImage
 import com.example.sns_v1.AppState
 import com.example.sns_v1.model.Comment
 import com.example.sns_v1.model.Post
+import com.example.sns_v1.ui.components.FocusAvatarIndicator
+import com.example.sns_v1.ui.components.FocusMiniBadge
 import com.example.sns_v1.ui.components.ProgressRow
 import com.example.sns_v1.ui.components.UserAvatar
 import com.example.sns_v1.ui.theme.Accent
@@ -255,20 +257,33 @@ private fun PostDetailHeader(
     onReaction: () -> Unit,
     onSave: () -> Unit
 ) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            UserAvatar(
-                displayName = post.displayName,
-                imageUrl = post.authorImageUrl,
-                size = 42.dp,
-                fontSize = 17.sp,
-                modifier = Modifier.clickable(onClick = onAuthorClick)
-            )
+            Box(modifier = Modifier.clickable(onClick = onAuthorClick)) {
+                UserAvatar(
+                    displayName = post.displayName,
+                    imageUrl = post.authorImageUrl,
+                    size = 42.dp,
+                    fontSize = 17.sp
+                )
+                FocusAvatarIndicator(post.authorFocus, size = 14.dp)
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(post.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(post.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    if (post.authorFocus != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        FocusMiniBadge(post.authorFocus)
+                    }
+                }
                 Text("@${post.userName}", fontSize = 15.sp, color = TextSecondary)
             }
         }
@@ -333,8 +348,6 @@ private fun PostDetailHeader(
         Spacer(modifier = Modifier.height(12.dp))
     }
 
-    HorizontalDivider(color = BorderColor, thickness = 1.dp)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -365,7 +378,7 @@ private fun PostDetailHeader(
         )
     }
 
-    HorizontalDivider(color = BorderColor, thickness = 1.dp)
+    }
 }
 
 @Composable

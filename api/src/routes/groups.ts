@@ -2,7 +2,7 @@ import { Hono, Context } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
-import { POST_COLUMNS, POST_FROM, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, mapPostRow, viewerBinds } from '../posts-query';
 import {
   GroupRow,
   GroupRole,
@@ -24,6 +24,26 @@ async function requireMe(c: Context<AppContext>) {
   return c.env.DB.prepare('SELECT user_id FROM users WHERE firebase_uid = ?')
     .bind(firebaseUser.uid)
     .first<{ user_id: string }>();
+}
+
+async function refreshMemberCount(c: Context<AppContext>, groupId: string, now: string) {
+  await c.env.DB.prepare(
+    `UPDATE groups SET member_count =
+       (SELECT COUNT(*) FROM group_members WHERE group_id = ? AND member_status = 'active'),
+       updated_at = ? WHERE group_id = ?`
+  ).bind(groupId, now, groupId).run();
+}
+
+async function activateMembership(c: Context<AppContext>, groupId: string, userId: string, now: string) {
+  await c.env.DB.prepare(
+    `INSERT INTO group_members
+       (group_member_id, group_id, user_id, role, member_status, joined_at, created_at, updated_at)
+     VALUES (?, ?, ?, 'member', 'active', ?, ?, ?)
+     ON CONFLICT(group_id, user_id) DO UPDATE SET
+       member_status = 'active', role = 'member', joined_at = excluded.joined_at,
+       updated_at = excluded.updated_at`
+  ).bind(crypto.randomUUID(), groupId, userId, now, now, now).run();
+  await refreshMemberCount(c, groupId, now);
 }
 
 function mapGroup(requestUrl: string, g: GroupRow, role: GroupRole) {
@@ -205,7 +225,30 @@ groups.post('/:groupId/join', authMiddleware, async (c) => {
   const role = await roleInGroup(c, group.group_id, me.user_id);
   if (role !== null) return c.json({ error: '既に参加しています' }, 409);
 
-  if (group.join_type !== 'open') {
+  if (group.join_type === 'approval') {
+    const now = new Date().toISOString();
+    const requestId = crypto.randomUUID();
+    try {
+      await c.env.DB.prepare(
+        `INSERT INTO group_join_requests (request_id, group_id, requester_user_id, status, created_at)
+         VALUES (?, ?, ?, 'pending', ?)`
+      ).bind(requestId, group.group_id, me.user_id, now).run();
+    } catch {
+      return c.json({ error: 'A join request is already pending' }, 409);
+    }
+    const admins = await c.env.DB.prepare(
+      `SELECT user_id FROM group_members
+       WHERE group_id = ? AND member_status = 'active' AND role IN ('owner', 'admin')`
+    ).bind(group.group_id).all<{ user_id: string }>();
+    const notifications = (admins.results ?? []).map((admin) => c.env.DB.prepare(
+      `INSERT INTO notifications
+       (notification_id, user_id, type, actor_id, group_id, group_join_request_id, created_at)
+       VALUES (?, ?, 'group_join_request', ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), admin.user_id, me.user_id, group.group_id, requestId, now));
+    if (notifications.length) await c.env.DB.batch(notifications);
+    return c.json({ requested: true, requestId }, 201);
+  }
+  if (group.join_type === 'invite') {
     return c.json({ error: 'このグループは参加申請または招待が必要です' }, 403);
   }
   if (group.member_count >= group.maximum_members) {
@@ -231,6 +274,63 @@ groups.post('/:groupId/join', authMiddleware, async (c) => {
 });
 
 /** オーナーは譲渡か削除をするまで退出できない（仕様書 7） */
+groups.post('/:groupId/invitations', authMiddleware, async (c) => {
+  const me = await requireMe(c);
+  if (!me) return c.json({ error: 'User not found' }, 404);
+  const group = await findGroup(c, c.req.param('groupId') ?? '');
+  if (!group) return c.json({ error: 'Group not found' }, 404);
+  if (!canEditGroup(await roleInGroup(c, group.group_id, me.user_id))) return c.json({ error: 'Only an administrator can invite members' }, 403);
+  if (group.join_type !== 'invite') return c.json({ error: 'This group does not use invitations' }, 400);
+  const body = await c.req.json<{ userName?: string }>();
+  const userName = body.userName?.trim().replace(/^@/, '');
+  if (!userName) return c.json({ error: 'userName is required' }, 400);
+  const invitee = await c.env.DB.prepare('SELECT user_id FROM users WHERE user_name = ?').bind(userName).first<{ user_id: string }>();
+  if (!invitee) return c.json({ error: 'User not found' }, 404);
+  if (await roleInGroup(c, group.group_id, invitee.user_id)) return c.json({ error: 'User is already a member' }, 409);
+  const now = new Date().toISOString();
+  const invitationId = crypto.randomUUID();
+  try {
+    await c.env.DB.prepare(`INSERT INTO group_invitations (invitation_id, group_id, invitee_user_id, inviter_user_id, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)`).bind(invitationId, group.group_id, invitee.user_id, me.user_id, now).run();
+  } catch { return c.json({ error: 'An invitation is already pending' }, 409); }
+  await c.env.DB.prepare(`INSERT INTO notifications (notification_id, user_id, type, actor_id, group_id, group_invitation_id, created_at) VALUES (?, ?, 'group_invitation', ?, ?, ?, ?)`).bind(crypto.randomUUID(), invitee.user_id, me.user_id, group.group_id, invitationId, now).run();
+  return c.json({ invited: true, invitationId }, 201);
+});
+
+groups.post('/:groupId/join-requests/:requestId/decision', authMiddleware, async (c) => {
+  const me = await requireMe(c);
+  if (!me) return c.json({ error: 'User not found' }, 404);
+  const group = await findGroup(c, c.req.param('groupId') ?? '');
+  if (!group) return c.json({ error: 'Group not found' }, 404);
+  if (!canEditGroup(await roleInGroup(c, group.group_id, me.user_id))) return c.json({ error: 'Only an administrator can review requests' }, 403);
+  const body = await c.req.json<{ approve?: boolean }>();
+  const request = await c.env.DB.prepare(`SELECT requester_user_id FROM group_join_requests WHERE request_id = ? AND group_id = ? AND status = 'pending'`).bind(c.req.param('requestId'), group.group_id).first<{ requester_user_id: string }>();
+  if (!request) return c.json({ error: 'Pending request not found' }, 404);
+  const now = new Date().toISOString();
+  if (body.approve) {
+    if (group.member_count >= group.maximum_members) return c.json({ error: 'Group is full' }, 403);
+    await activateMembership(c, group.group_id, request.requester_user_id, now);
+  }
+  await c.env.DB.prepare(`UPDATE group_join_requests SET status = ?, reviewed_by_user_id = ?, reviewed_at = ? WHERE request_id = ?`).bind(body.approve ? 'approved' : 'rejected', me.user_id, now, c.req.param('requestId')).run();
+  return c.json({ approved: body.approve === true });
+});
+
+groups.post('/:groupId/invitations/:invitationId/decision', authMiddleware, async (c) => {
+  const me = await requireMe(c);
+  if (!me) return c.json({ error: 'User not found' }, 404);
+  const group = await findGroup(c, c.req.param('groupId') ?? '');
+  if (!group) return c.json({ error: 'Group not found' }, 404);
+  const body = await c.req.json<{ accept?: boolean }>();
+  const invitation = await c.env.DB.prepare(`SELECT invitation_id FROM group_invitations WHERE invitation_id = ? AND group_id = ? AND invitee_user_id = ? AND status = 'pending'`).bind(c.req.param('invitationId'), group.group_id, me.user_id).first();
+  if (!invitation) return c.json({ error: 'Pending invitation not found' }, 404);
+  const now = new Date().toISOString();
+  if (body.accept) {
+    if (group.member_count >= group.maximum_members) return c.json({ error: 'Group is full' }, 403);
+    await activateMembership(c, group.group_id, me.user_id, now);
+  }
+  await c.env.DB.prepare(`UPDATE group_invitations SET status = ?, responded_at = ? WHERE invitation_id = ?`).bind(body.accept ? 'accepted' : 'declined', now, c.req.param('invitationId')).run();
+  return c.json({ accepted: body.accept === true });
+});
+
 groups.post('/:groupId/leave', authMiddleware, async (c) => {
   const me = await requireMe(c);
   if (!me) return c.json({ error: 'User not found' }, 404);
@@ -311,7 +411,7 @@ groups.get('/:groupId/posts', authMiddleware, async (c) => {
      WHERE p.group_id = ?
      ORDER BY p.is_pinned DESC, p.created_at DESC
      LIMIT 50`
-  ).bind(me.user_id, me.user_id, group.group_id).all();
+  ).bind(...viewerBinds(me.user_id), group.group_id).all();
 
   return c.json({
     posts: (result.results as any[]).map((r) => ({

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sns_v1.AppState
 import com.example.sns_v1.auth.TokenManager
+import com.example.sns_v1.model.FocusPresence
+import com.example.sns_v1.model.Garden
 import com.example.sns_v1.model.Goal
 import com.example.sns_v1.model.Post
 import com.example.sns_v1.network.ApiClient
@@ -19,6 +21,8 @@ data class ProfileData(
     val profileImageUrl: String? = null,
     val followerCount: Int = 0,
     val followingCount: Int = 0,
+    /** 自分がいま集中していれば入る */
+    val focus: FocusPresence? = null,
 )
 
 class ProfileViewModel : ViewModel() {
@@ -27,6 +31,10 @@ class ProfileViewModel : ViewModel() {
         ProfileData(AppState.displayName, AppState.userName, "")
     )
     val profile: StateFlow<ProfileData> = _profile.asStateFlow()
+
+    /** 今週の庭。積み重ねが見えるようにプロフィールへ出す */
+    private val _garden = MutableStateFlow(Garden())
+    val garden: StateFlow<Garden> = _garden.asStateFlow()
 
     private val _goals = MutableStateFlow<List<Goal>>(emptyList())
     val goals: StateFlow<List<Goal>> = _goals.asStateFlow()
@@ -191,8 +199,17 @@ class ProfileViewModel : ViewModel() {
                                           else json.optString("profileImageUrl").ifBlank { null },
                         followerCount = json.optInt("followerCount", 0),
                         followingCount = json.optInt("followingCount", 0),
+                        focus = json.optJSONObject("focus")?.let { f ->
+                            FocusPresence(
+                                focusSessionId = f.optString("focusSessionId", ""),
+                                status = f.optString("status", "active"),
+                                activityTitle = f.optString("activityTitle", ""),
+                                elapsedSeconds = f.optInt("elapsedSeconds", 0)
+                            )
+                        },
                     )
                 }
+                ApiClient.instance.getGarden(token).onSuccess { _garden.value = it }
                 ApiClient.instance.getMyGoals(token).onSuccess { goals ->
                     _goals.value = goals
                 }

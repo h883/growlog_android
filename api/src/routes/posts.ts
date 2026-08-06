@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
-import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow, viewerBinds } from '../posts-query';
 import { deferredFlag } from '../focus-state';
 
 const posts = new Hono<AppContext>();
@@ -16,7 +16,7 @@ posts.get('/', authMiddleware, async (c) => {
   ).bind(firebaseUser.uid).first<{ user_id: string }>();
   if (!me) return c.json({ error: 'User not found' }, 404);
 
-  const params: string[] = [me.user_id, me.user_id];
+  const params: string[] = viewerBinds(me.user_id);
   let from = POST_FROM;
 
   if (feed === 'following') {
@@ -67,7 +67,7 @@ posts.get('/:postId', authMiddleware, async (c) => {
 
   const row = await c.env.DB.prepare(
     `SELECT ${POST_COLUMNS} ${POST_FROM} WHERE p.post_id = ?`
-  ).bind(me.user_id, me.user_id, postId).first<any>();
+  ).bind(...viewerBinds(me.user_id), postId).first<any>();
   if (!row) return c.json({ error: 'Post not found' }, 404);
 
   return c.json(mapPostRow(c.req.url, row));

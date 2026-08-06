@@ -19,5 +19,7 @@ data class Post(
     val commentCount: Int = 0,
     val myReaction: Boolean = false,
     val isSaved: Boolean = false,
+    /** 投稿者がいま集中していれば入る */
+    val authorFocus: FocusPresence? = null,
     val createdAt: String = ""
 )

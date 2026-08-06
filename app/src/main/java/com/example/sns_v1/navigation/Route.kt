@@ -7,6 +7,10 @@ sealed class Route(val route: String) {
     object CreatePost : Route("create_post")
     object Notifications : Route("notifications")
     object Profile : Route("profile")
+    object Goals : Route("goals")
+    object GoalDetail : Route("goals/{goalId}") {
+        fun createRoute(goalId: String) = "goals/$goalId"
+    }
     object EditProfile : Route("profile/edit")
     object Settings : Route("settings")
     object Messages : Route("messages")

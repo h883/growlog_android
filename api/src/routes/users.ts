@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
-import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow, viewerBinds } from '../posts-query';
+import { fetchPresence } from '../focus-presence';
 
 const users = new Hono<AppContext>();
 
@@ -20,11 +21,12 @@ users.get('/me', authMiddleware, async (c) => {
     return c.json({ error: 'User not found' }, 404);
   }
 
-  const [followerRow, followingRow] = await Promise.all([
+  const [followerRow, followingRow, presence] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM follows WHERE following_id = ?')
       .bind(user.user_id).first<{ cnt: number }>(),
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM follows WHERE follower_id = ?')
       .bind(user.user_id).first<{ cnt: number }>(),
+    fetchPresence(c.env.DB, user.user_id, user.user_id),
   ]);
 
   return c.json({
@@ -32,6 +34,7 @@ users.get('/me', authMiddleware, async (c) => {
     profileImageUrl: imageUrlFor(c.req.url, user.profile_image_key),
     followerCount: followerRow?.cnt ?? 0,
     followingCount: followingRow?.cnt ?? 0,
+    focus: presence,
   });
 });
 
@@ -47,7 +50,7 @@ users.get('/me/posts', authMiddleware, async (c) => {
     `SELECT ${POST_COLUMNS} ${POST_FROM}
      WHERE p.user_id = ? AND ${OUTSIDE_GROUP_CONDITION}
      ORDER BY p.created_at DESC LIMIT 50`
-  ).bind(me.user_id, me.user_id, me.user_id).all();
+  ).bind(...viewerBinds(me.user_id), me.user_id).all();
 
   return c.json({
     posts: (result.results as any[]).map((r) => mapPostRow(c.req.url, r)),
@@ -67,7 +70,7 @@ users.get('/me/saves', authMiddleware, async (c) => {
     `SELECT ${POST_COLUMNS} ${POST_FROM}
      JOIN saves ms ON ms.post_id = p.post_id AND ms.user_id = ?
      ORDER BY ms.created_at DESC LIMIT 50`
-  ).bind(me.user_id, me.user_id, me.user_id).all();
+  ).bind(...viewerBinds(me.user_id), me.user_id).all();
 
   return c.json({
     posts: (result.results as any[]).map((r) => mapPostRow(c.req.url, r)),

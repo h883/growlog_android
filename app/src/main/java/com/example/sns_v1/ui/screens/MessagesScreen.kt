@@ -8,20 +8,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sns_v1.ui.components.AppCard
+import com.example.sns_v1.ui.components.FocusAvatarIndicator
+import com.example.sns_v1.ui.components.FocusMiniBadge
 import com.example.sns_v1.ui.components.UserAvatar
 import com.example.sns_v1.ui.theme.Accent
 import com.example.sns_v1.ui.theme.BorderColor
 import com.example.sns_v1.ui.theme.TextSecondary
 import com.example.sns_v1.viewmodel.MessagesViewModel
+
+private val Icons.Outlined.EditSquare: ImageVector
+    get() = Icons.Outlined.Add
 
 @Composable
 fun MessagesScreen(
@@ -59,6 +67,9 @@ fun MessagesScreen(
                 fontSize = 19.sp,
                 modifier = Modifier.padding(start = if (showBack) 4.dp else 16.dp)
             )
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { }) { Icon(Icons.Outlined.Search, "検索", tint = Accent) }
+            IconButton(onClick = { }) { Icon(Icons.Outlined.EditSquare, "新規メッセージ", tint = Accent) }
         }
         HorizontalDivider(color = BorderColor, thickness = 1.dp)
 
@@ -94,12 +105,15 @@ fun MessagesScreen(
                             padding = 16.dp
                         ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            UserAvatar(
-                                displayName = conversation.partnerDisplayName,
-                                imageUrl = conversation.partnerImageUrl,
-                                size = 46.dp,
-                                fontSize = 18.sp
-                            )
+                            Box {
+                                UserAvatar(
+                                    displayName = conversation.partnerDisplayName,
+                                    imageUrl = conversation.partnerImageUrl,
+                                    size = 46.dp,
+                                    fontSize = 18.sp
+                                )
+                                FocusAvatarIndicator(conversation.partnerFocus, size = 15.dp)
+                            }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -111,6 +125,10 @@ fun MessagesScreen(
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
                                     )
+                                    if (conversation.partnerFocus != null) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        FocusMiniBadge(conversation.partnerFocus)
+                                    }
                                     Spacer(modifier = Modifier.weight(1f))
                                     if (conversation.lastMessageAt != null) {
                                         Text(

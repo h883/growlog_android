@@ -2,7 +2,7 @@ import { Hono, Context } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
-import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow, viewerBinds } from '../posts-query';
 
 const discover = new Hono<AppContext>();
 
@@ -44,7 +44,7 @@ discover.get('/', authMiddleware, async (c) => {
       `SELECT ${POST_COLUMNS} ${POST_FROM}
        WHERE p.goal_id IS NOT NULL AND ${OUTSIDE_GROUP_CONDITION}
        ORDER BY p.created_at DESC LIMIT 5`
-    ).bind(me.user_id, me.user_id).all(),
+    ).bind(...viewerBinds(me.user_id)).all(),
   ]);
 
   const counts = new Map<string, number>();
@@ -97,7 +97,7 @@ discover.get('/search', authMiddleware, async (c) => {
        WHERE ${OUTSIDE_GROUP_CONDITION}
          AND (p.content LIKE ? ESCAPE '\\' OR p.tags LIKE ? ESCAPE '\\')
        ORDER BY p.created_at DESC LIMIT 30`
-    ).bind(me.user_id, me.user_id, pattern, pattern).all(),
+    ).bind(...viewerBinds(me.user_id), pattern, pattern).all(),
     c.env.DB.prepare(
       `SELECT u.user_id, u.display_name, u.user_name, u.biography, u.profile_image_key,
               COUNT(f.follower_id) as follower_count

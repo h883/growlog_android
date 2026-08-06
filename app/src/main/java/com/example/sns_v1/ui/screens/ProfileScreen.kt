@@ -27,7 +27,11 @@ import androidx.compose.ui.unit.sp
 import com.example.sns_v1.model.Goal
 import com.example.sns_v1.ui.components.AppCard
 import com.example.sns_v1.ui.components.ProgressRow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.example.sns_v1.model.formatDurationJa
 import com.example.sns_v1.ui.components.CreateGoalDialog
+import com.example.sns_v1.ui.components.FocusStatusLine
 import com.example.sns_v1.ui.components.GoalCard
 import com.example.sns_v1.ui.components.GrowLogTopBar
 import com.example.sns_v1.ui.components.PostCard
@@ -51,12 +55,14 @@ fun ProfileScreen(
     onNavigateToUserProfile: (String) -> Unit = {},
     onNavigateToEditProfile: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToDiscover: () -> Unit = {}
+    onNavigateToDiscover: () -> Unit = {},
+    onNavigateToGoals: () -> Unit = {}
 ) {
     val tabs = listOf("投稿", "目標", "保存", "達成記録")
     var selectedTab by remember { mutableIntStateOf(0) }
 
     val profile by viewModel.profile.collectAsState()
+    val garden by viewModel.garden.collectAsState()
     val goals by viewModel.goals.collectAsState()
     val posts by viewModel.posts.collectAsState()
     val savedPosts by viewModel.savedPosts.collectAsState()
@@ -165,6 +171,33 @@ fun ProfileScreen(
                         }
                     }
 
+                    // アバターの右下はカメラボタンが使っているので、集中中は下に1行出す
+                    if (profile.focus != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FocusStatusLine(profile.focus, modifier = Modifier.fillMaxWidth())
+                    }
+
+                    // 積み重ねが見えるように、今週育てたものを並べる
+                    if (garden.plants.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("今週の庭", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            garden.plants.forEach { plant ->
+                                Text(plant.emoji, fontSize = 26.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "集中セッション：${garden.sessionCount}回 ・ 育てた時間：${formatDurationJa(garden.totalSeconds)}",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                    }
+
                     if (errorMessage != null) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
@@ -223,7 +256,7 @@ fun ProfileScreen(
                         Spacer(modifier = Modifier.height(18.dp))
                         ActiveGoalsProgress(
                             goals = activeGoals,
-                            onSeeAll = { selectedTab = 1 }
+                            onSeeAll = onNavigateToGoals
                         )
                     }
                 }
@@ -362,6 +395,7 @@ private fun ActiveGoalsProgress(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .clickable(onClick = onSeeAll)
             .padding(16.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

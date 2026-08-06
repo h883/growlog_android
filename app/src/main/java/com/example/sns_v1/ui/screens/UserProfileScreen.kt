@@ -1,6 +1,7 @@
 package com.example.sns_v1.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sns_v1.ui.components.FocusAvatarIndicator
+import com.example.sns_v1.ui.components.FocusStatusLine
 import com.example.sns_v1.ui.components.PostCard
 import com.example.sns_v1.ui.components.UserAvatar
 import com.example.sns_v1.ui.theme.Accent
@@ -32,7 +35,7 @@ fun UserProfileScreen(
     val posts by viewModel.posts.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         item {
             Row(
                 modifier = Modifier
@@ -57,24 +60,38 @@ fun UserProfileScreen(
         } else {
             val p = profile!!
             item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    UserAvatar(
-                        displayName = p.displayName,
-                        imageUrl = p.profileImageUrl,
-                        size = 80.dp,
-                        fontSize = 32.sp,
-                        backgroundColor = Accent.copy(alpha = 0.15f),
-                        contentColor = Accent
-                    )
+                    Box {
+                        UserAvatar(
+                            displayName = p.displayName,
+                            imageUrl = p.profileImageUrl,
+                            size = 80.dp,
+                            fontSize = 32.sp,
+                            backgroundColor = Accent.copy(alpha = 0.15f),
+                            contentColor = Accent
+                        )
+                        FocusAvatarIndicator(p.focus, size = 22.dp)
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(p.displayName, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("@${p.userName}", fontSize = 14.sp, color = TextSecondary)
+                    if (p.focus != null) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FocusStatusLine(
+                            presence = p.focus,
+                            displayName = p.displayName,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     if (p.biography.isNotBlank()) {
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(p.biography, fontSize = 14.sp, lineHeight = 22.sp)
@@ -137,7 +154,7 @@ fun UserProfileScreen(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                HorizontalDivider(color = BorderColor, thickness = 1.dp)
+                }
             }
 
             if (posts.isEmpty()) {

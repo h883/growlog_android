@@ -7,6 +7,8 @@ import com.example.sns_v1.auth.TokenManager
 import com.example.sns_v1.model.FocusMode
 import com.example.sns_v1.model.FocusSession
 import com.example.sns_v1.model.FocusVisibility
+import com.example.sns_v1.model.Garden
+import com.example.sns_v1.model.GardenTheme
 import com.example.sns_v1.model.Goal
 import com.example.sns_v1.network.ApiClient
 import kotlinx.coroutines.Job
@@ -20,7 +22,9 @@ import kotlinx.coroutines.launch
 data class FocusResult(
     val activityTitle: String,
     val actualDurationSeconds: Int,
-    val breakCount: Int
+    val breakCount: Int,
+    val gardenTheme: GardenTheme = GardenTheme.PLANT,
+    val gardenStage: Int = 0
 )
 
 class FocusViewModel : ViewModel() {
@@ -49,11 +53,34 @@ class FocusViewModel : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    /** 開始ダイアログの初期選択。前回選んだテーマを覚えておく */
+    private val _lastTheme = MutableStateFlow(GardenTheme.PLANT)
+    val lastTheme: StateFlow<GardenTheme> = _lastTheme.asStateFlow()
+
+    /** 今週の庭 */
+    private val _garden = MutableStateFlow(Garden())
+    val garden: StateFlow<Garden> = _garden.asStateFlow()
+
     private var tickJob: Job? = null
 
     init {
         load()
         loadGoals()
+        loadGarden()
+    }
+
+    fun loadGarden() {
+        viewModelScope.launch {
+            try {
+                val token = TokenManager.getIdToken()
+                ApiClient.instance.getGarden(token).onSuccess { garden ->
+                    _garden.value = garden
+                    // 前回育てたものを次回の初期選択にする
+                    garden.plants.lastOrNull()?.let { _lastTheme.value = it.gardenTheme }
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun load() {
@@ -109,6 +136,7 @@ class FocusViewModel : ViewModel() {
         plannedMinutes: Int?,
         visibility: FocusVisibility,
         mode: FocusMode,
+        gardenTheme: GardenTheme = GardenTheme.PLANT,
         groupId: String? = null
     ) {
         viewModelScope.launch {
@@ -122,8 +150,12 @@ class FocusViewModel : ViewModel() {
                     groupId = groupId,
                     plannedDurationSeconds = plannedMinutes?.let { it * 60 },
                     visibility = visibility,
-                    mode = mode
-                ).onSuccess { load() }
+                    mode = mode,
+                    gardenTheme = gardenTheme
+                ).onSuccess {
+                    _lastTheme.value = gardenTheme
+                    load()
+                }
                     .onFailure { e -> _error.value = e.message }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -164,16 +196,18 @@ class FocusViewModel : ViewModel() {
                 }
                 response.onSuccess { json ->
                     tickJob?.cancel()
-                    if (completed) {
-                        _result.value = FocusResult(
-                            activityTitle = json.optString("activityTitle", session.activityTitle),
-                            actualDurationSeconds = json.optInt("actualDurationSeconds", _elapsed.value),
-                            breakCount = json.optInt("breakCount", session.breakCount)
-                        )
-                    }
+                    // 途中終了でも、育った分は結果として見せる
+                    _result.value = FocusResult(
+                        activityTitle = json.optString("activityTitle", session.activityTitle),
+                        actualDurationSeconds = json.optInt("actualDurationSeconds", _elapsed.value),
+                        breakCount = json.optInt("breakCount", session.breakCount),
+                        gardenTheme = GardenTheme.from(json.optString("gardenTheme")),
+                        gardenStage = json.optInt("gardenStage", session.gardenStage)
+                    )
                     _mySession.value = null
                     _elapsed.value = 0
                     load()
+                    loadGarden()
                 }.onFailure { e -> _error.value = e.message }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -212,11 +246,16 @@ class FocusViewModel : ViewModel() {
         _result.value = null
     }
 
-    fun cheer(session: FocusSession) {
+    fun cheer(session: FocusSession) = react(session, "cheer")
+
+    /** そっと水をあげる。相手には終了後にまとめて届く */
+    fun water(session: FocusSession) = react(session, "water")
+
+    private fun react(session: FocusSession, type: String) {
         viewModelScope.launch {
             try {
                 val token = TokenManager.getIdToken()
-                ApiClient.instance.sendFocusReaction(token, session.focusSessionId, "cheer")
+                ApiClient.instance.sendFocusReaction(token, session.focusSessionId, type)
                     .onSuccess { load() }
             } catch (_: Exception) {
             }

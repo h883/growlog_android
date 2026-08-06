@@ -3,6 +3,7 @@ package com.example.sns_v1.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sns_v1.auth.TokenManager
+import com.example.sns_v1.model.FocusSession
 import com.example.sns_v1.model.Post
 import com.example.sns_v1.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +32,40 @@ class PostsViewModel : ViewModel() {
     private val _feed = MutableStateFlow(Feed.POPULAR)
     val feed: StateFlow<Feed> = _feed.asStateFlow()
 
+    /** ホーム上部に出す「いま集中中」の一覧。自分も含む */
+    private val _focusing = MutableStateFlow<List<FocusSession>>(emptyList())
+    val focusing: StateFlow<List<FocusSession>> = _focusing.asStateFlow()
+
     init {
         loadPosts()
+        loadFocusing()
+    }
+
+    /** 集中状況は投稿と独立して更新したいので、失敗しても画面にエラーは出さない */
+    fun loadFocusing() {
+        viewModelScope.launch {
+            try {
+                val token = TokenManager.getIdToken()
+                ApiClient.instance.getActiveFocusSessions(token)
+                    .onSuccess { sessions ->
+                        _focusing.value = sessions
+                        applyPresenceToPosts(sessions)
+                    }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    /**
+     * タイムラインを読み直さずにバッジだけ最新へ寄せる。
+     * この一覧は公開範囲を考慮済みなので、載っていない相手は非表示でよい。
+     */
+    private fun applyPresenceToPosts(sessions: List<FocusSession>) {
+        val byUser = sessions.associateBy { it.userId }
+        _posts.value = _posts.value.map { post ->
+            val presence = byUser[post.userId]?.toPresence()
+            if (post.authorFocus == presence) post else post.copy(authorFocus = presence)
+        }
     }
 
     fun selectFeed(feed: Feed) {
@@ -43,6 +76,7 @@ class PostsViewModel : ViewModel() {
     }
 
     fun loadPosts() {
+        loadFocusing()
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

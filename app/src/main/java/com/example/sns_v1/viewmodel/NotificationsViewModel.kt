@@ -50,4 +50,24 @@ class NotificationsViewModel : ViewModel() {
             }
         }
     }
+
+    fun respondToGroupAction(notification: Notification, accept: Boolean) {
+        val groupId = notification.groupId ?: return
+        viewModelScope.launch {
+            try {
+                val token = TokenManager.getIdToken()
+                val result = when (notification.type) {
+                    "group_join_request" -> notification.groupJoinRequestId?.let {
+                        ApiClient.instance.decideGroupJoinRequest(token, groupId, it, accept)
+                    }
+                    "group_invitation" -> notification.groupInvitationId?.let {
+                        ApiClient.instance.decideGroupInvitation(token, groupId, it, accept)
+                    }
+                    else -> null
+                }
+                result?.onSuccess { loadNotifications() }
+            } catch (_: Exception) {
+            }
+        }
+    }
 }

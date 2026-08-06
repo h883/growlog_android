@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Send
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,6 +78,8 @@ fun ChatScreen(
                     Text("@${p.userName}", fontSize = 11.sp, color = TextSecondary)
                 }
             }
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { }) { Icon(Icons.Outlined.MoreVert, "メニュー", tint = TextSecondary) }
         }
         HorizontalDivider(color = BorderColor, thickness = 1.dp)
 

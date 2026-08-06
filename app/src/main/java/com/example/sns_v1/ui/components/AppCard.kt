@@ -5,12 +5,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.sns_v1.ui.theme.BorderColor
+import com.example.sns_v1.ui.theme.CardBackground
 
 /** 画面共通の余白。カードの左右マージンと内側パディングをここで揃える */
 val CardHorizontalMargin = 16.dp
@@ -28,14 +31,13 @@ fun AppCard(
     padding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(horizontal = padding, vertical = 12.dp),
-            content = content
-        )
-        HorizontalDivider(color = BorderColor, thickness = 1.dp)
-    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = CardHorizontalMargin, vertical = 5.dp)
+            .background(CardBackground, RoundedCornerShape(16.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = padding, vertical = 14.dp),
+        content = content
+    )
 }

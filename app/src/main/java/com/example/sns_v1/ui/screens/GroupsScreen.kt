@@ -48,8 +48,8 @@ fun GroupsScreen(
     var showCreate by remember { mutableStateOf(false) }
 
     if (showCreate) {
-        CreateGroupDialog(
-            onDismiss = { showCreate = false },
+        CreateGroupScreen(
+            onBack = { showCreate = false },
             onCreate = { name, slug, description, visibility ->
                 viewModel.createGroup(name, slug, description, visibility) { groupId ->
                     showCreate = false
@@ -57,6 +57,7 @@ fun GroupsScreen(
                 }
             }
         )
+        return
     }
 
     Column(
@@ -197,12 +198,15 @@ fun GroupVisibilityBadge(visibility: GroupVisibility) {
 
 @Composable
 private fun GroupRow(group: Group, onClick: () -> Unit) {
-    Column {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 15.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             GroupIcon(group.iconImageUrl, group.groupName, 48.dp)
@@ -236,7 +240,6 @@ private fun GroupRow(group: Group, onClick: () -> Unit) {
                 Text("参加中", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Accent)
             }
         }
-        HorizontalDivider(color = BorderColor, thickness = 1.dp)
     }
 }
 

@@ -5,6 +5,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -115,7 +117,7 @@ fun CreatePostScreen(
                 Text("キャンセル", color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             Text(
-                text = "GrowLog",
+                text = "新しい記録",
                 modifier = Modifier.weight(1f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 fontSize = 28.sp,
@@ -148,7 +150,7 @@ fun CreatePostScreen(
         }
 
         Row(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 28.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             UserAvatar(
@@ -161,6 +163,19 @@ fun CreatePostScreen(
             Text("◉  全員が返信できます", color = Accent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
 
+        if (selectedGoal != null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                color = AccentSoft,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(Modifier.padding(14.dp)) {
+                    Text("現在の目標", fontSize = 11.sp, color = Accent, fontWeight = FontWeight.Bold)
+                    Text(selectedGoal!!.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+
         TextField(
             value = content,
             onValueChange = { content = it },
@@ -169,7 +184,7 @@ fun CreatePostScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 20.dp, vertical = 10.dp),
+                .padding(horizontal = 20.dp, vertical = 4.dp),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -188,6 +203,23 @@ fun CreatePostScreen(
                     onClick = { imageUri = null },
                     modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).background(Color.Black.copy(alpha = .48f), CircleShape)
                 ) { Icon(Icons.Outlined.Close, "画像を削除", tint = Color.White) }
+            }
+        }
+        if (imageUri == null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                    .height(58.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+                    .clickable { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(Icons.Outlined.Image, null, tint = Accent)
+                Spacer(Modifier.width(8.dp))
+                Text("写真を追加", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
         }
         if (tags.isNotEmpty()) {

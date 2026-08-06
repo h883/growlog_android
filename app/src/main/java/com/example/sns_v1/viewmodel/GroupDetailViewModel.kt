@@ -3,6 +3,7 @@ package com.example.sns_v1.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sns_v1.auth.TokenManager
+import com.example.sns_v1.model.FocusRoom
 import com.example.sns_v1.model.Group
 import com.example.sns_v1.model.GroupMember
 import com.example.sns_v1.model.Post
@@ -32,6 +33,10 @@ class GroupDetailViewModel(private val groupId: String) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    /** 集中ルーム。メンバーの共同の森を出すのに使う */
+    private val _focusRoom = MutableStateFlow<FocusRoom?>(null)
+    val focusRoom: StateFlow<FocusRoom?> = _focusRoom.asStateFlow()
+
     init {
         load()
     }
@@ -51,9 +56,13 @@ class GroupDetailViewModel(private val groupId: String) : ViewModel() {
                 if (group.canViewContent) {
                     ApiClient.instance.getGroupPosts(token, groupId).onSuccess { _posts.value = it }
                     ApiClient.instance.getGroupMembers(token, groupId).onSuccess { _members.value = it }
+                    // 集中ルームはメンバーだけが見られる。403 は無視して森を出さない
+                    ApiClient.instance.getFocusRoom(token, groupId)
+                        .onSuccess { _focusRoom.value = it }
                 } else {
                     _posts.value = emptyList()
                     _members.value = emptyList()
+                    _focusRoom.value = null
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -84,6 +93,21 @@ class GroupDetailViewModel(private val groupId: String) : ViewModel() {
                 val token = TokenManager.getIdToken()
                 ApiClient.instance.leaveGroup(token, groupId)
                     .onSuccess { load() }
+                    .onFailure { e -> _error.value = e.message }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    fun invite(userName: String) {
+        val normalized = userName.trim().removePrefix("@")
+        if (normalized.isBlank()) return
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                val token = TokenManager.getIdToken()
+                ApiClient.instance.inviteToGroup(token, groupId, normalized)
                     .onFailure { e -> _error.value = e.message }
             } catch (e: Exception) {
                 _error.value = e.message

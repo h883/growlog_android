@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.example.sns_v1.ui.theme.Accent
 import com.example.sns_v1.ui.theme.BorderColor
 import com.example.sns_v1.ui.theme.SubBackground
 import com.example.sns_v1.ui.theme.TextSecondary
+import com.example.sns_v1.ui.screens.SettingsPreferences
 import com.example.sns_v1.viewmodel.NotificationsViewModel
 
 private val tabTypes = listOf(null, "reaction", "comment", "follow")
@@ -37,10 +39,26 @@ fun NotificationsScreen(viewModel: NotificationsViewModel) {
     val notifications by viewModel.notifications.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences(SettingsPreferences.FILE, android.content.Context.MODE_PRIVATE) }
+    var settingsRevision by remember { mutableIntStateOf(0) }
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> settingsRevision++ }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
-    val filtered = remember(notifications, selectedTab) {
+    val filtered = remember(notifications, selectedTab, settingsRevision) {
         val type = tabTypes[selectedTab]
-        if (type == null) notifications else notifications.filter { it.type == type }
+        val enabled = notifications.filter {
+            when (it.type) {
+                "reaction" -> prefs.getBoolean(SettingsPreferences.REACTIONS, true)
+                "comment" -> prefs.getBoolean(SettingsPreferences.COMMENTS, true)
+                "follow" -> prefs.getBoolean(SettingsPreferences.FOLLOWS, true)
+                else -> true
+            }
+        }
+        if (type == null) enabled else enabled.filter { it.type == type }
     }
 
     Column(
@@ -92,7 +110,7 @@ fun NotificationsScreen(viewModel: NotificationsViewModel) {
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
             ) {
                 items(filtered, key = { it.notificationId }) { notif ->
-                    NotificationRow(notif)
+                    NotificationRow(notif) { accept -> viewModel.respondToGroupAction(notif, accept) }
                 }
                 item {
                     Box(
@@ -108,7 +126,7 @@ fun NotificationsScreen(viewModel: NotificationsViewModel) {
 }
 
 @Composable
-private fun NotificationRow(notif: Notification) {
+private fun NotificationRow(notif: Notification, onGroupAction: (Boolean) -> Unit) {
     AppCard(padding = 16.dp) {
     Row(verticalAlignment = Alignment.Top) {
         // 未読を示す小さなドット
@@ -161,6 +179,23 @@ private fun NotificationRow(notif: Notification) {
             } else if (notif.postContent != null) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text("「${notif.postContent}…」", fontSize = 12.sp, color = TextSecondary)
+            }
+            if (notif.type == "group_join_request" || notif.type == "group_invitation") {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    if (notif.type == "group_join_request")
+                        "${notif.actorDisplayName} wants to join ${notif.groupName ?: "this group"}. Approve?"
+                    else
+                        "${notif.actorDisplayName} invited you to ${notif.groupName ?: "a group"}.",
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onGroupAction(false) }, modifier = Modifier.height(36.dp)) { Text(if (notif.type == "group_join_request") "No" else "Decline") }
+                    Button(onClick = { onGroupAction(true) }, colors = ButtonDefaults.buttonColors(containerColor = Accent), modifier = Modifier.height(36.dp)) { Text(if (notif.type == "group_join_request") "Yes" else "Accept") }
+                }
             }
         }
 

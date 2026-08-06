@@ -10,5 +10,7 @@ data class UserProfile(
     val followingCount: Int,
     val isFollowing: Boolean,
     val postCount: Int,
-    val goalCount: Int
+    val goalCount: Int,
+    /** いま集中していれば入る。コメントやDMを送る側への案内に使う */
+    val focus: FocusPresence? = null
 )

@@ -3,7 +3,8 @@ import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
 import { deferredFlag } from '../focus-state';
-import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow } from '../posts-query';
+import { POST_COLUMNS, POST_FROM, OUTSIDE_GROUP_CONDITION, mapPostRow, viewerBinds } from '../posts-query';
+import { fetchPresence } from '../focus-presence';
 
 const follows = new Hono<AppContext>();
 
@@ -77,11 +78,9 @@ follows.get('/:userName/profile', authMiddleware, async (c) => {
     c.env.DB.prepare('SELECT COUNT(*) as cnt FROM goals WHERE user_id = ?').bind(user.user_id).first<{ cnt: number }>(),
   ]);
 
-  // 集中中なら、コメントやDMを送る側に「通知は終了後に届く」と伝えられるようにする
-  const focusRow = await c.env.DB.prepare(
-    `SELECT activity_title FROM focus_sessions
-     WHERE user_id = ? AND status IN ('active', 'paused')`
-  ).bind(user.user_id).first<{ activity_title: string }>();
+  // 集中中なら、コメントやDMを送る側に「通知は終了後に届く」と伝えられるようにする。
+  // 公開範囲の判定を含むので fetchPresence を通す（直接引くと private が漏れる）
+  const presence = await fetchPresence(c.env.DB, me.user_id, user.user_id);
 
   return c.json({
     userId: user.user_id,
@@ -94,8 +93,7 @@ follows.get('/:userName/profile', authMiddleware, async (c) => {
     isFollowing: !!isFollowingRow,
     postCount: postCountRow?.cnt ?? 0,
     goalCount: goalCountRow?.cnt ?? 0,
-    isFocusing: focusRow !== null,
-    focusActivityTitle: focusRow?.activity_title ?? null,
+    focus: presence,
   });
 });
 
@@ -117,7 +115,7 @@ follows.get('/:userName/posts', authMiddleware, async (c) => {
     `SELECT ${POST_COLUMNS} ${POST_FROM}
      WHERE p.user_id = ? AND ${OUTSIDE_GROUP_CONDITION}
      ORDER BY p.created_at DESC LIMIT 50`
-  ).bind(me.user_id, me.user_id, target.user_id).all();
+  ).bind(...viewerBinds(me.user_id), target.user_id).all();
 
   return c.json({
     posts: (result.results as any[]).map((r) => mapPostRow(c.req.url, r)),

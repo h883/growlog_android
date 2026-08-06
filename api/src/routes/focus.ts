@@ -2,10 +2,12 @@ import { Hono, Context } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
+import { gardenStage, normalizeTheme, secondsToNextStage } from '../garden';
 
 const focus = new Hono<AppContext>();
 
-const REACTION_TYPES = ['cheer', 'together', 'talk_later'];
+// water(そっと水をあげる) / light(光を届ける) は作業ガーデン用
+const REACTION_TYPES = ['cheer', 'together', 'talk_later', 'water', 'light'];
 
 async function requireMe(c: Context<AppContext>) {
   const firebaseUser = c.get('firebaseUser');
@@ -29,6 +31,10 @@ function mapSession(requestUrl: string, r: any, nowMs: number) {
 
   const elapsed = Math.max(0, Math.floor((referenceMs - startedMs) / 1000) - pausedSeconds);
 
+  // 終了済みなら確定させた段階を、進行中なら現在の経過から求めた段階を返す
+  const planned = r.planned_duration_seconds ?? null;
+  const stage = r.completed_at ? (r.garden_stage ?? 0) : gardenStage(elapsed, planned);
+
   return {
     focusSessionId: r.focus_session_id,
     userId: r.user_id,
@@ -51,6 +57,9 @@ function mapSession(requestUrl: string, r: any, nowMs: number) {
     concentrationRating: r.concentration_rating ?? null,
     cheerCount: r.cheer_count ?? 0,
     myReactions: (r.my_reactions as string | null)?.split(',').filter(Boolean) ?? [],
+    gardenTheme: normalizeTheme(r.garden_theme),
+    gardenStage: stage,
+    secondsToNextStage: r.completed_at ? null : secondsToNextStage(elapsed, planned),
   };
 }
 
@@ -76,6 +85,7 @@ focus.post('/', authMiddleware, async (c) => {
     plannedDurationSeconds?: number;
     visibilityType?: string;
     focusMode?: string;
+    gardenTheme?: string;
   }>();
 
   const activityTitle = body.activityTitle?.trim();
@@ -97,18 +107,24 @@ focus.post('/', authMiddleware, async (c) => {
     ? body.focusMode!
     : 'light';
 
+  const theme = normalizeTheme(body.gardenTheme);
   const sessionId = crypto.randomUUID();
   const now = new Date().toISOString();
 
   await c.env.DB.prepare(
     `INSERT INTO focus_sessions
        (focus_session_id, user_id, goal_id, group_id, activity_title, status,
-        visibility_type, focus_mode, planned_duration_seconds, started_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?)`
+        visibility_type, focus_mode, planned_duration_seconds, garden_theme,
+        started_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?)`
   ).bind(sessionId, me.user_id, body.goalId ?? null, body.groupId ?? null, activityTitle,
-    visibility, mode, body.plannedDurationSeconds ?? null, now, now, now).run();
+    visibility, mode, body.plannedDurationSeconds ?? null, theme, now, now, now).run();
 
-  return c.json({ focusSessionId: sessionId, startedAt: now }, 201);
+  // 次回のダイアログで前回選んだテーマを初期表示にする
+  await c.env.DB.prepare('UPDATE users SET garden_theme = ? WHERE user_id = ?')
+    .bind(theme, me.user_id).run();
+
+  return c.json({ focusSessionId: sessionId, startedAt: now, gardenTheme: theme }, 201);
 });
 
 /**
@@ -247,14 +263,18 @@ async function finishSession(
   );
   const now = new Date().toISOString();
 
+  // 途中でやめても、そこまで育った分は残す（罰を与えない設計）
+  const stage = gardenStage(actual, session.planned_duration_seconds ?? null);
+
   await c.env.DB.prepare(
     `UPDATE focus_sessions SET status = ?, completed_at = ?, actual_duration_seconds = ?,
+            garden_stage = ?,
             reflection = COALESCE(?, reflection),
             concentration_rating = COALESCE(?, concentration_rating),
             end_reason = COALESCE(?, end_reason),
             updated_at = ?
      WHERE focus_session_id = ?`
-  ).bind(status, now, actual, body.reflection?.trim() ?? null,
+  ).bind(status, now, actual, stage, body.reflection?.trim() ?? null,
     body.concentrationRating ?? null, body.endReason ?? null, now,
     session.focus_session_id).run();
 
@@ -265,6 +285,8 @@ async function finishSession(
     actualDurationSeconds: actual,
     breakCount: session.break_count ?? 0,
     activityTitle: session.activity_title,
+    gardenTheme: normalizeTheme(session.garden_theme),
+    gardenStage: stage,
   });
 }
 
@@ -302,6 +324,14 @@ focus.post('/:sessionId/reactions', authMiddleware, async (c) => {
       `INSERT INTO focus_reactions (focus_reaction_id, focus_session_id, user_id, reaction_type, created_at)
        VALUES (?, ?, ?, ?, ?)`
     ).bind(crypto.randomUUID(), sessionId, me.user_id, type, now).run();
+
+    // 集中の邪魔をしないよう、進行中は保留にして終了時にまとめて届ける
+    const stillFocusing = session.status === 'active' || session.status === 'paused';
+    await c.env.DB.prepare(
+      `INSERT INTO notifications (notification_id, user_id, type, actor_id, is_deferred, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), session.user_id, `focus_${type}`, me.user_id,
+      stillFocusing ? 1 : 0, now).run();
   }
 
   const count = await c.env.DB.prepare(
@@ -309,6 +339,62 @@ focus.post('/:sessionId/reactions', authMiddleware, async (c) => {
   ).bind(sessionId).first<{ cnt: number }>();
 
   return c.json({ reacted: !existing, reactionType: type, cheerCount: count?.cnt ?? 0 });
+});
+
+/**
+ * 「今週の庭」。完了・中断を問わず、その週に育てたものを並べる。
+ * 対象ユーザーを省略すると自分の庭を返す。
+ */
+focus.get('/garden/:userName?', authMiddleware, async (c) => {
+  const me = await requireMe(c);
+  if (!me) return c.json({ error: 'User not found' }, 404);
+
+  const userName = c.req.param('userName');
+  let targetId = me.user_id;
+  if (userName) {
+    const target = await c.env.DB.prepare(
+      'SELECT user_id FROM users WHERE user_name = ?'
+    ).bind(userName).first<{ user_id: string }>();
+    if (!target) return c.json({ error: 'User not found' }, 404);
+    targetId = target.user_id;
+  }
+
+  // 週の始まりは月曜。日曜(0)は6日戻す
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setUTCHours(0, 0, 0, 0);
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((now.getUTCDay() + 6) % 7));
+
+  // 他人の庭は、非公開にしたセッションを除いて見せる
+  const visibilityCondition = targetId === me.user_id
+    ? ''
+    : ` AND visibility_type != 'private'`;
+
+  const result = await c.env.DB.prepare(
+    `SELECT focus_session_id, activity_title, garden_theme, garden_stage,
+            actual_duration_seconds, completed_at
+       FROM focus_sessions
+      WHERE user_id = ?
+        AND status IN ('completed', 'cancelled')
+        AND completed_at >= ?${visibilityCondition}
+      ORDER BY completed_at ASC
+      LIMIT 60`
+  ).bind(targetId, weekStart.toISOString()).all();
+
+  const rows = result.results as any[];
+  return c.json({
+    weekStart: weekStart.toISOString(),
+    sessionCount: rows.length,
+    totalSeconds: rows.reduce((sum, r) => sum + (r.actual_duration_seconds ?? 0), 0),
+    plants: rows.map((r) => ({
+      focusSessionId: r.focus_session_id,
+      activityTitle: r.activity_title,
+      gardenTheme: normalizeTheme(r.garden_theme),
+      gardenStage: r.garden_stage ?? 0,
+      durationSeconds: r.actual_duration_seconds ?? 0,
+      completedAt: r.completed_at,
+    })),
+  });
 });
 
 export default focus;
@@ -335,7 +421,12 @@ focusRoom.get('/:groupId/focus-room', authMiddleware, async (c) => {
   const todayStart = new Date();
   todayStart.setUTCHours(0, 0, 0, 0);
 
-  const [activeRows, totalRow] = await Promise.all([
+  // 「今月みんなで木を N 本育てました」を出すため、月初からの完了数も数える
+  const monthStart = new Date();
+  monthStart.setUTCHours(0, 0, 0, 0);
+  monthStart.setUTCDate(1);
+
+  const [activeRows, totalRow, forestRow] = await Promise.all([
     c.env.DB.prepare(
       `${SESSION_SELECT}
        WHERE f.group_id = ? AND f.status IN ('active', 'paused')
@@ -346,11 +437,22 @@ focusRoom.get('/:groupId/focus-room', authMiddleware, async (c) => {
        FROM focus_sessions
        WHERE group_id = ? AND status = 'completed' AND completed_at >= ?`
     ).bind(group.group_id, todayStart.toISOString()).first<{ total: number }>(),
+    c.env.DB.prepare(
+      `SELECT COUNT(*) as grown,
+              COALESCE(SUM(actual_duration_seconds), 0) as total,
+              COUNT(DISTINCT user_id) as members
+       FROM focus_sessions
+       WHERE group_id = ? AND status IN ('completed', 'cancelled') AND completed_at >= ?`
+    ).bind(group.group_id, monthStart.toISOString())
+      .first<{ grown: number; total: number; members: number }>(),
   ]);
 
   const now = Date.now();
   return c.json({
     activeSessions: (activeRows.results as any[]).map((r) => mapSession(c.req.url, r, now)),
     todayTotalSeconds: totalRow?.total ?? 0,
+    monthGrownCount: forestRow?.grown ?? 0,
+    monthTotalSeconds: forestRow?.total ?? 0,
+    monthMemberCount: forestRow?.members ?? 0,
   });
 });

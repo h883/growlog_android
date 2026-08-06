@@ -2,6 +2,7 @@ import { Hono, Context } from 'hono';
 import { AppContext } from '../types';
 import { authMiddleware } from '../middleware/auth';
 import { imageUrlFor } from '../media';
+import { presenceColumn, presenceBinds, mapPresence } from '../focus-presence';
 
 const messages = new Hono<AppContext>();
 
@@ -31,6 +32,7 @@ messages.get('/', authMiddleware, async (c) => {
   const result = await c.env.DB.prepare(
     `SELECT c.conversation_id, c.last_message, c.last_message_at,
             u.user_id, u.display_name, u.user_name, u.profile_image_key,
+            ${presenceColumn('u')},
             (SELECT COUNT(*) FROM messages m
               WHERE m.conversation_id = c.conversation_id
                 AND m.sender_id != ? AND m.is_read = 0) as unread_count
@@ -39,8 +41,9 @@ messages.get('/', authMiddleware, async (c) => {
      WHERE c.user_a_id = ? OR c.user_b_id = ?
      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
      LIMIT 50`
-  ).bind(me.user_id, me.user_id, me.user_id, me.user_id).all();
+  ).bind(...presenceBinds(me.user_id), me.user_id, me.user_id, me.user_id, me.user_id).all();
 
+  const now = Date.now();
   return c.json({
     conversations: (result.results as any[]).map((r) => ({
       conversationId: r.conversation_id,
@@ -51,6 +54,7 @@ messages.get('/', authMiddleware, async (c) => {
       lastMessage: r.last_message ?? null,
       lastMessageAt: r.last_message_at ?? null,
       unreadCount: r.unread_count ?? 0,
+      partnerFocus: mapPresence(r.focus_presence, now),
     })),
   });
 });
