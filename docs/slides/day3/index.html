@@ -1,0 +1,781 @@
+<title>DAY3 アイディア出しテンプレート集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --ink:#253440;
+  --ink-soft:#3d5266;
+  --paper:#ffffff;
+  --mist:#f1f2f1;
+  --field:#f6f8f9;
+  --field-ink:#4a6076;
+  --dash:#b9c3cc;
+  --muted:#7b8c9b;
+  --a-note:#f1ca05;
+  --a-store:#71b6f1;
+  --a-sns:#31d96c;
+  --a-fund:#ff7958;
+  --stage:#151d24;
+  --chrome:#0f161c;
+  --jp:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--stage);color:#e7edf2;font-family:var(--jp);overflow:hidden}
+
+/* ---------- viewer chrome ---------- */
+#viewport{position:fixed;inset:0 0 52px 0;display:grid;place-items:center;overflow:hidden}
+#deck{width:1280px;height:720px;position:relative;transform:scale(var(--s,1));transform-origin:center center;flex:none}
+.wrap{position:absolute;inset:0;opacity:0;pointer-events:none}
+.wrap.on{opacity:1;pointer-events:auto}
+
+#bar{position:fixed;left:0;right:0;bottom:0;height:52px;background:var(--chrome);
+  border-top:1px solid #24313c;display:flex;align-items:center;gap:10px;padding:0 16px;z-index:40}
+#bar .title{font-size:13px;font-weight:700;color:#9fb2c1;letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+button.nav{font-family:var(--jp);font-size:13px;font-weight:700;color:#dce6ee;background:#1e2a34;
+  border:1px solid #33434f;border-radius:8px;padding:8px 13px;cursor:pointer;line-height:1}
+button.nav:hover{background:#28363f}
+button.nav:focus-visible{outline:2px solid var(--a-store);outline-offset:2px}
+#count{font-size:13px;font-weight:700;color:#9fb2c1;font-variant-numeric:tabular-nums;min-width:62px;text-align:center}
+
+/* ---------- overview ---------- */
+body.ov{overflow:auto}
+body.ov #viewport{position:static;display:block;overflow:visible;padding:18px 18px 70px}
+body.ov #deck{width:auto;height:auto;transform:none;display:grid;gap:14px;
+  grid-template-columns:repeat(auto-fill,minmax(288px,1fr))}
+body.ov .wrap{position:relative;inset:auto;opacity:1;pointer-events:auto;aspect-ratio:16/9;
+  overflow:hidden;border-radius:6px;cursor:pointer;outline:2px solid transparent}
+body.ov .wrap:hover{outline-color:var(--a-store)}
+body.ov .wrap.on{outline-color:#fff}
+body.ov .slide{transform:scale(.225);transform-origin:top left;width:1280px;height:720px}
+body.ov .wrap::after{content:attr(data-n);position:absolute;right:6px;bottom:5px;background:rgba(21,29,36,.85);
+  color:#fff;font-size:11px;font-weight:700;border-radius:4px;padding:2px 6px}
+
+/* ---------- slide base ---------- */
+.slide{width:1280px;height:720px;position:relative;overflow:hidden;background:var(--paper);color:var(--ink)}
+.s-note{background:var(--a-note)}
+.s-store{background:var(--a-store)}
+.s-sns{background:var(--a-sns)}
+.s-fund{background:var(--a-fund)}
+.s-dark{background:var(--ink);color:#fff}
+.s-mist{background:var(--mist)}
+
+/* ---------- cover ---------- */
+.cover{padding:34px 56px;display:flex;flex-direction:column}
+.eyebrow{font-size:20px;font-weight:500;color:var(--ink)}
+.cover .mid{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  text-align:center;gap:18px;padding-bottom:70px}
+.cover h1{margin:0;font-size:66px;font-weight:500;line-height:1.28;letter-spacing:.01em;text-wrap:balance}
+.cover .sub{font-size:34px;font-weight:400;color:var(--ink-soft)}
+.cover .foot{font-size:17px;color:var(--muted);text-align:center}
+
+/* ---------- index ---------- */
+.idx{padding:52px 60px}
+.idx h2{margin:0 0 34px;font-size:46px;font-weight:500}
+.idx .lead{font-size:25px;color:var(--ink-soft);margin-bottom:34px}
+.idx ol{margin:0;padding-left:36px;display:flex;flex-direction:column;gap:28px;font-size:28px}
+.idx ol li::marker{color:var(--ink-soft)}
+.idx mark{background:var(--hl);color:var(--ink);padding:2px 4px;border-bottom:2px solid rgba(37,52,64,.55)}
+.idx .note{margin-top:38px;font-size:17px;color:var(--muted)}
+
+/* ---------- dark card slides ---------- */
+.dk{padding:44px 52px;display:flex;flex-direction:column;height:100%}
+.dk h2{margin:0 0 26px;font-size:40px;font-weight:700;color:#fff}
+.dk .cards{display:grid;grid-template-columns:1fr 1fr;gap:30px;flex:1}
+.dcard{background:#fff;color:var(--ink);border-radius:18px;padding:26px 28px;display:flex;flex-direction:column;gap:12px}
+.dhead{display:flex;align-items:center;gap:13px}
+.num{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;
+  font-size:16px;font-weight:700;flex:none}
+.dhead h3{margin:0;font-size:22px;font-weight:700;line-height:1.35}
+.dcard p{margin:0;font-size:15px;line-height:1.7;color:var(--ink-soft)}
+.dcard .item{margin-top:2px}
+.dcard .item b{display:block;font-size:15px}
+.dcard .item span{font-size:14px;color:var(--ink-soft)}
+.hint{margin-top:auto;border-top:1px solid #e3e8ec;padding-top:12px}
+.hint b{font-size:15px}
+
+/* ---------- comparison ---------- */
+.cmp{padding:44px 52px;display:flex;flex-direction:column;height:100%}
+.cmp h2{margin:0 0 8px;font-size:40px;font-weight:700}
+.cmp .lead{font-size:17px;color:var(--ink-soft);margin:0 0 26px}
+.cmp .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.ccard{background:#fff;border-radius:14px;padding:20px 20px 22px;display:flex;flex-direction:column;gap:11px;
+  border-top:9px solid var(--c)}
+.ccard .tag{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+.ccard h3{margin:0;font-size:21px;font-weight:700;line-height:1.35}
+.ccard .q{font-size:15px;font-weight:700;color:var(--ink-soft);line-height:1.6}
+.ccard ul{margin:0;padding-left:17px;font-size:13.5px;line-height:1.85;color:var(--ink-soft)}
+.cmp .fit{margin-top:auto;background:var(--field);border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.6}
+.cmp .band{margin-top:auto;background:var(--ink);color:#fff;border-radius:12px;padding:18px 26px;
+  font-size:19px;line-height:1.6;display:flex;align-items:center;gap:16px}
+.cmp .band .k{font-size:12px;font-weight:700;letter-spacing:.12em;color:#9fb2c1;white-space:nowrap}
+.cmp .fit b{color:var(--ink)}
+
+/* ---------- how-to (accent bg + white panel) ---------- */
+.how{padding:26px;height:100%}
+.panel{background:#fff;border-radius:24px;height:100%;padding:38px 44px;display:flex;flex-direction:column}
+.panel h2{margin:0 0 26px;font-size:40px;font-weight:700}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:16px;flex:1}
+.step{background:var(--field);border-radius:10px;padding:18px 22px;display:flex;gap:16px;align-items:flex-start}
+.step.wide{grid-column:1 / -1}
+.step .num{width:38px;height:38px;font-size:19px}
+.step h3{margin:0 0 6px;font-size:19px;font-weight:700}
+.step p{margin:0;font-size:14.5px;line-height:1.65;color:var(--ink-soft)}
+.step .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+/* ---------- worksheet ---------- */
+.ws{padding:22px 24px;height:100%;display:flex;flex-direction:column;gap:14px}
+.ws-head{display:flex;align-items:center;gap:22px}
+.badge{background:var(--ink);color:#fff;font-size:19px;font-weight:700;border-radius:9px;
+  padding:14px 26px;min-width:300px;text-align:center}
+.who{font-size:18px;font-weight:700}
+.who .blank{font-weight:400;color:rgba(37,52,64,.45);margin-left:10px}
+.ws-body{flex:1;display:grid;grid-template-columns:505px 1fr;gap:18px;min-height:0}
+.ws-left{display:flex;flex-direction:column;gap:11px;min-height:0}
+.box{background:#fff;border:3px solid var(--ink);border-radius:5px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:8px;min-height:0}
+.ws-left .box{flex:1}
+.box h3{margin:0;font-size:16.5px;font-weight:700;line-height:1.35}
+.box .sub{font-size:13px;color:var(--ink-soft);margin:-3px 0 0}
+.fill{background:var(--field);border-radius:4px;padding:9px 11px;font-size:13px;line-height:1.6;
+  color:var(--field-ink);flex:1;display:flex;align-items:center}
+.fill.top{align-items:flex-start}
+.row{display:flex;align-items:center;gap:10px}
+.row .lbl{font-size:14.5px;font-weight:700;white-space:nowrap}
+.row .fill{flex:1}
+.stars{color:#f5b301;font-size:15px;letter-spacing:2px}
+.kv{font-size:13px;line-height:1.7;color:var(--field-ink)}
+.kv b{color:var(--ink)}
+
+/* sketch panel */
+.ws-right{display:flex}
+.ws-right .box{flex:1}
+.sketch{flex:1;border:2px dashed var(--dash);border-radius:12px;display:grid;place-items:center;
+  color:var(--muted);font-size:13.5px;position:relative;padding:14px}
+.sketch .cap{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
+
+/* phone mockups */
+.phones{display:flex;align-items:center;justify-content:center;gap:22px;width:100%}
+.phone{width:158px;height:266px;border:2px solid var(--dash);border-radius:16px;background:#fff;
+  padding:9px;display:flex;flex-direction:column;gap:7px;position:relative}
+.phone .screen{flex:1;background:#f2f4f6;border-radius:7px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;font-size:12px;color:var(--muted);text-align:center;padding:8px}
+.phone .home{width:26px;height:26px;border:2px dashed var(--dash);border-radius:50%;margin:0 auto}
+.tapbtn{border:1.5px dotted var(--muted);border-radius:5px;padding:4px 10px;font-size:11.5px;color:var(--ink-soft);background:#fff}
+.arrow{color:var(--ink-soft);font-size:22px}
+.tapwrap{display:flex;align-items:flex-end}
+.taptag{position:relative;left:-10px;top:9px;background:#ffe3e3;color:#e0413f;font-size:11px;
+  font-weight:700;border-radius:4px;padding:2px 6px;white-space:nowrap}
+.narr{border-top:1px solid #e3e8ec;padding-top:9px;font-size:13px;color:var(--ink-soft)}
+.narr b{color:var(--ink)}
+.iconbox{width:118px;border:2px dashed var(--dash);border-radius:8px;display:grid;place-items:center;
+  font-size:12px;color:var(--muted);text-align:center;padding:8px;line-height:1.5}
+
+/* print variant */
+.printtag{position:absolute;top:14px;right:22px;font-size:13px;font-weight:700;color:rgba(37,52,64,.55);
+  border:1.5px solid rgba(37,52,64,.35);border-radius:5px;padding:3px 10px;background:rgba(255,255,255,.6)}
+.blank-line{border-bottom:1.5px solid var(--dash);flex:1;min-height:20px}
+
+/* closing */
+.close{padding:48px 56px;display:flex;flex-direction:column}
+.close h2{margin:0 0 10px;font-size:42px;font-weight:700;color:#fff}
+.close .lead{font-size:18px;color:#b9c8d4;margin:0 0 30px}
+.close .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;flex:0 0 auto}
+.tstep{background:#fff;color:var(--ink);border-radius:16px;padding:24px 26px;display:flex;flex-direction:column;gap:10px}
+.tstep .k{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
+.tstep h3{margin:0;font-size:23px;font-weight:700}
+.tstep p{margin:0;font-size:14.5px;line-height:1.75;color:var(--ink-soft)}
+.tstep .pin{margin-top:auto;font-size:13.5px;font-weight:700;background:var(--field);border-radius:8px;padding:9px 11px}
+.close .rule{margin-top:auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  border-radius:12px;padding:16px 22px;font-size:17px;line-height:1.7;color:#e8eff4}
+.close .rule b{color:#fff}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- print ---------- */
+@page{size:1280px 720px;margin:0}
+@media print{
+  body{overflow:visible;background:#fff}
+  #bar{display:none}
+  #viewport{position:static;display:block;padding:0;overflow:visible}
+  #deck{width:1280px;height:auto;transform:none;display:block}
+  .wrap{position:relative;inset:auto;opacity:1;page-break-after:always;break-after:page}
+  .slide{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+
+<div id="viewport"><div id="deck">
+
+<!-- 1 表紙 -->
+<div class="wrap" data-n="1"><section class="slide cover">
+  <div class="eyebrow">プログラミング学習会 〜DAY3に向けて〜</div>
+  <div class="mid">
+    <h1>プロダクト制作に向けて<br>アイディアをふくらませよう</h1>
+    <div class="sub">〜誰かの何かを解決するためのWebアプリ開発〜</div>
+  </div>
+  <div class="foot">アイディアを形にするための、4つのワークシート・テンプレート集</div>
+</section></div>
+
+<!-- 2 もくじ -->
+<div class="wrap" data-n="2"><section class="slide s-mist idx">
+  <h2>もくじ</h2>
+  <div class="lead">自由にシートを使ってアイディアをふくらませよう</div>
+  <ol>
+    <li><mark style="--hl:var(--a-note)">アプリのアイデアノート</mark></li>
+    <li><mark style="--hl:var(--a-store)">App Store リリース予告シート</mark></li>
+    <li><mark style="--hl:var(--a-sns)">SNS PR動画企画コンテ</mark></li>
+    <li><mark style="--hl:var(--a-fund)">クラファン風アプリ開発プロジェクト</mark></li>
+  </ol>
+  <div class="note">4つのうち、自分に合いそうなものを1つ選んで使ってください。組み合わせても、一部だけ使ってもOKです。</div>
+</section></div>
+
+<!-- 3 まとめ：このテンプレート集は何か -->
+<div class="wrap" data-n="3"><section class="slide s-dark dk">
+  <h2>はじめに：テンプレート集の使い方</h2>
+  <div class="cards">
+    <div class="dcard">
+      <div class="dhead"><div class="num">1</div><h3>いろんなパターンを用意しました！</h3></div>
+      <p>アイデアの膨らませ方は人それぞれ。今回はアイデアを形にするための切り口として、4つのパターンを用意しました。自分に合いそうなものを1つ選んで使ってみてください！</p>
+      <div class="item"><b>・アプリアイデアノート</b><span>シンプルに「誰のどんな瞬間」を良くするかから考える</span></div>
+      <div class="item"><b>・App Store風 企画書</b><span>ストアに並んだ姿やレビューを妄想してワクワクを作る</span></div>
+      <div class="item"><b>・SNS PR動画コンテ</b><span>「あるある悩み」から解決までのストーリーを描く</span></div>
+      <div class="item"><b>・クラファン風 企画書</b><span>「絶対に作る機能」と「余裕があれば作る機能」を整理する</span></div>
+    </div>
+    <div class="dcard">
+      <div class="dhead"><div class="num">2</div><h3>アイデアの出し方に<br>「正解」はありません！</h3></div>
+      <p>ここで紹介している方法はあくまで一例です。<br>他にも色々な考え方やまとめ方があります。</p>
+      <p style="font-weight:700;color:var(--ink)">「この項目だけ使う」<br>「組み合わせる」なども大歓迎！</p>
+      <p>自由に枠を埋めて、自分だけのアイデアを形にしてみよう！</p>
+      <div class="hint"><b>💡 開発のヒント</b>
+        <p style="margin-top:6px">頭の中にある「こんなアプリ作ってみたい！」を形にするためのテンプレート集です。まずは直感で選んでみましょう。</p>
+      </div>
+    </div>
+  </div>
+</section></div>
+
+<!-- 4 4つの切り口くらべ -->
+<div class="wrap" data-n="4"><section class="slide s-mist cmp">
+  <h2>4つの切り口を、くらべてみる</h2>
+  <p class="lead">同じアイデアでも、どの入口から考えるかで出てくるものが変わります。迷ったら、いちばんワクワクした1枚を選んでください。</p>
+  <div class="grid">
+    <div class="ccard" style="--c:var(--a-note)">
+      <div class="tag">SHEET 01</div>
+      <h3>アプリの<br>アイデアノート</h3>
+      <div class="q">「誰の、どの瞬間？」から考える</div>
+      <ul><li>ターゲットと瞬間</li><li>魔法のボタン（機能1つ）</li><li>名前とキャッチコピー</li><li>トッピング機能</li></ul>
+      <div class="fit"><b>向いている人</b><br>まだアイデアがふわっとしている</div>
+    </div>
+    <div class="ccard" style="--c:var(--a-store)">
+      <div class="tag">SHEET 02</div>
+      <h3>App Store<br>リリース予告シート</h3>
+      <div class="q">「完成した姿」から逆算する</div>
+      <ul><li>アプリ名とアイコン</li><li>未来の★5レビュー</li><li>推しポイント①②</li><li>ストア用スクショ2枚</li></ul>
+      <div class="fit"><b>向いている人</b><br>作りたいものが既に見えている</div>
+    </div>
+    <div class="ccard" style="--c:var(--a-sns)">
+      <div class="tag">SHEET 03</div>
+      <h3>SNS PR<br>動画企画コンテ</h3>
+      <div class="q">「悩み→解決」の物語で考える</div>
+      <ul><li>タイトル（キャッチコピー）</li><li>1コマ目：あるある悩み</li><li>2コマ目：神機能の操作</li><li>3コマ目：スッキリした結末</li></ul>
+      <div class="fit"><b>向いている人</b><br>誰かに伝える／見せるのが好き</div>
+    </div>
+    <div class="ccard" style="--c:var(--a-fund)">
+      <div class="tag">SHEET 04</div>
+      <h3>クラファン風<br>開発プロジェクト</h3>
+      <div class="q">「今日どこまで作るか」で考える</div>
+      <ul><li>助けたい人のストーリー</li><li>初期目標＝コア機能1つ</li><li>ストレッチゴール</li><li>プロトタイプの画面遷移</li></ul>
+      <div class="fit"><b>向いている人</b><br>時間内に完成させたい</div>
+    </div>
+  </div>
+  <div class="band"><span class="k">どれを選んでも</span>
+    最後は「<b>誰の</b>・どの瞬間を・<b>どのボタン1つ</b>で良くするか」に行き着きます。</div>
+</section></div>
+
+<!-- 5 使い方① -->
+<div class="wrap" data-n="5"><section class="slide s-note how">
+  <div class="panel">
+    <h2>アプリアイデアノートの使い方</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div>
+        <h3>ターゲットと「瞬間」を決める</h3>
+        <p>「誰のどんな瞬間」をちょっと良くするか、具体的な日常のシーンを考えます。</p></div></div>
+      <div class="step"><div class="num">2</div><div>
+        <h3>「魔法のボタン」を定義する</h3>
+        <p>それを押すだけで、その人が笑顔になるような核となる機能を1つに絞り込みます。</p></div></div>
+      <div class="step"><div class="num">3</div><div>
+        <h3>名前とコピーをつける</h3>
+        <p>アプリの名前と、その魅力や価値がひと目で伝わるキャッチコピーを考案します。</p></div></div>
+      <div class="step"><div class="num">4</div><div>
+        <h3>おまけ（トッピング機能）</h3>
+        <p>さらにアプリが魅力的になるような、自動連携や共有などの追加要素を考えます。</p></div></div>
+      <div class="step wide"><div class="num">5</div><div>
+        <h3>画面と動きをスケッチする</h3>
+        <p>右側の「ラフスケッチ領域」に、ボタンを押した時の変化や画面のレイアウトを自由に描きます。</p></div></div>
+    </div>
+  </div>
+</section></div>
+
+<!-- 6 ワークシート① -->
+<div class="wrap" data-n="6"><section class="slide s-note ws">
+  <div class="ws-head">
+    <div class="badge">アプリのアイデアノート</div>
+    <div class="who">名前:<span class="blank">（なまえ）</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box">
+        <h3>1. 誰のどんな瞬間を「ちょっと良く」する？</h3>
+        <div class="fill">例：何を着るか悩む自分、部活の連絡に気づかない友達、夕飯を決めるお母さん</div>
+      </div>
+      <div class="box">
+        <h3>2. その人が笑顔になる「魔法のボタン」を1つ決めよう！</h3>
+        <div class="fill">例：ボタンを押したら、今日のラッキーカラーと服の組み合わせが出る</div>
+      </div>
+      <div class="box">
+        <h3>3. アプリの名前とキャッチコピーをつけよう！</h3>
+        <div class="row"><div class="lbl">・アプリ名:</div><div class="fill">例：あいうえお</div></div>
+        <div class="row"><div class="lbl">・キャッチコピー:</div><div class="fill">例：毎朝の「着ていく服がない！」を3秒で解決</div></div>
+      </div>
+      <div class="box">
+        <h3>4. 【おまけ】追加したい「トッピング機能」は？</h3>
+        <div class="fill">例：天気を自動で取得する、友達にLINEで共有できる</div>
+      </div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>5. アプリの「画面と動き」を描いてみよう！</h3>
+      <p class="sub">※下の枠に、画面の見た目やボタンを押した変化を自由に描いてね</p>
+      <div class="sketch">【ラフスケッチ領域】</div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 7 使い方② -->
+<div class="wrap" data-n="7"><section class="slide s-store how">
+  <div class="panel">
+    <h2>App Store風企画書テンプレートの使い方</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div>
+        <h3>基本情報の入力</h3>
+        <div class="two">
+          <div><p><b>アプリ名＆アイコン</b><br>開発者名と、思い描くアプリの名前を記入。アイコン領域には自由なイラストやイメージを配置します。</p></div>
+          <div><p><b>推しポイント</b><br>絶対に実装する「目玉機能」と、余裕があれば入れたい「追加機能」を切り分けて整理します。</p></div>
+        </div></div></div>
+      <div class="step"><div class="num">2</div><div>
+        <h3>ユーザー体験の妄想</h3>
+        <div class="two">
+          <div><p><b>未来の★5レビュー</b><br>アプリを実際に使ったユーザーが、ストアに書き込んでくれそうな「理想のレビュー」を想像して書きます。</p></div>
+          <div><p><b>効果</b><br>ユーザーがどんな課題を解決し、どう喜ぶかを具体的に可視化して開発意欲を高めます。</p></div>
+        </div></div></div>
+      <div class="step wide"><div class="num">3</div><div>
+        <h3>画面イメージの設計</h3>
+        <div class="two">
+          <div><p><b>ストーリーの視覚化</b><br>「使う前の画面」から「ボタンをタップした後の結果画面」への変化を、2つのスマホ枠に沿って描きます。</p></div>
+          <div><p><b>ラフスケッチ</b><br>最下部のフリーエリアには、思いついた画面構成やデザイン、アイデアを自由にスケッチしましょう。</p></div>
+        </div></div></div>
+    </div>
+  </div>
+</section></div>
+
+<!-- 8 ワークシート② -->
+<div class="wrap" data-n="8"><section class="slide s-store ws">
+  <div class="ws-head">
+    <div class="badge">App Store リリース予告シート</div>
+    <div class="who">開発者名:<span class="blank">（なまえ）</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box">
+        <h3>■ アプリ名 ＆ アプリアイコン</h3>
+        <div style="display:flex;gap:12px;flex:1">
+          <div class="row" style="flex:1"><div class="lbl">・アプリ名:</div><div class="fill">例：あいうえお</div></div>
+          <div class="iconbox">アプリのアイコンを描いてみよう！</div>
+        </div>
+      </div>
+      <div class="box">
+        <h3>■ 未来のユーザーからの「★5レビュー」</h3>
+        <p class="sub">遊んだ・使った人がストアに書き込みそうなコメントを妄想しよう！</p>
+        <div class="stars">★★★★★</div>
+        <div class="fill top"><div class="kv">
+          <b>タイトル:</b> 例：毎朝の絶望が消えました！<br>
+          <b>コメント:</b> 例：服選びに10分かかって遅刻しかけてたけど、これを使って3秒で解決！部活の友達にも激推しした！
+        </div></div>
+      </div>
+      <div class="box">
+        <h3>■ このアプリの「推しポイント」</h3>
+        <div style="font-size:14.5px;font-weight:700">・推しポイント①（絶対に作る目玉機能）:</div>
+        <div class="fill">例：あいうえお</div>
+        <div style="font-size:14.5px;font-weight:700">・推しポイント②（余裕があれば載せる追加機能）:</div>
+        <div class="fill">例：あいうえお</div>
+      </div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ ストア掲載用スクリーンショット（画面イメージ）</h3>
+      <p class="sub">スマホ画面の中で「何が表示されて」「どこをタップするか」を描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone">
+            <div class="screen">画面1：つかう前
+              <div class="tapwrap"><div class="tapbtn">ボタン</div><div class="taptag">👆 タップ!</div></div>
+            </div>
+            <div class="home"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="phone">
+            <div class="screen">画面2：結果画面</div>
+            <div class="home"></div>
+          </div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 9 使い方③ -->
+<div class="wrap" data-n="9"><section class="slide s-sns how">
+  <div class="panel">
+    <h2>SNS動画風企画コンテシートの使い方</h2>
+    <div class="steps" style="grid-template-columns:repeat(4,1fr)">
+      <div class="step" style="flex-direction:column;gap:10px"><div class="num">1</div><div>
+        <h3>タイトル案の決定</h3>
+        <p>視聴者の目を引くキャッチコピーを考えます。「検証」「解決」などの興味をそそるワードを入れると効果的です。</p></div></div>
+      <div class="step" style="flex-direction:column;gap:10px"><div class="num">2</div><div>
+        <h3>冒頭3秒のフック</h3>
+        <p>1コマ目には日常の「悩み・困りごと」を配置。ターゲット層が「自分のことだ！」と共感できるセリフを書き出します。</p></div></div>
+      <div class="step" style="flex-direction:column;gap:10px"><div class="num">3</div><div>
+        <h3>操作と見せ場</h3>
+        <p>2コマ目にアプリの神機能と操作画面のイメージ図をスケッチ。ナレーションの文言も併せて想定しておきます。</p></div></div>
+      <div class="step" style="flex-direction:column;gap:10px"><div class="num">4</div><div>
+        <h3>ハッピーエンド</h3>
+        <p>3コマ目にアプリを使った後のスッキリした解決状態を描きます。理想の結末を明確にしておくことが大切です。</p></div></div>
+    </div>
+  </div>
+</section></div>
+
+<!-- 10 ワークシート③ -->
+<div class="wrap" data-n="10"><section class="slide s-sns ws">
+  <div class="ws-head">
+    <div class="badge">SNS PR動画企画コンテ</div>
+    <div class="who">製作者:<span class="blank">@</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box">
+        <h3>■ 動画のタイトル（キャッチコピー）</h3>
+        <div class="fill top"><div class="kv">（例：【検証】クラスの集金で絶対もめる問題を3秒で解決してみた）<br>○○解決してみた</div></div>
+      </div>
+      <div class="box">
+        <h3>■ 1コマ目（冒頭3秒）：あるあるな「悩み・困りごと」</h3>
+        <div class="fill top"><div class="kv">・セリフ・画面：「［例：また部活の連絡見落とした…］ってなってる人集合！」<br>（どんな人が、どんなことで困っている場面から動画をスタートする？）</div></div>
+      </div>
+      <div class="box">
+        <h3>■ 3コマ目（ラスト）：使ったあとのスッキリした変化</h3>
+        <div class="fill top"><div class="kv">・セリフ・画面：「［例：一瞬で全員にリマインドがいって解決！］」<br>（アプリを使った結果、どんなハッピーな結末になる？）</div></div>
+      </div>
+      <div class="box">
+        <h3>■ 今日の目標（今日作る機能）</h3>
+        <div class="fill">・動画の中で実際に見せる「神機能」を1つだけ決定：</div>
+      </div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ 2コマ目（中盤）：アプリ登場 ＆ 実際に使っている画面</h3>
+      <p class="sub">画面のどこをタップして、何が起きるかをイラストで描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone" style="width:186px;height:292px">
+            <div class="screen">［スマホ画面のイラスト］
+              <div class="tapbtn">［ここを押すと…］</div>
+            </div>
+            <div class="home"></div>
+          </div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+      <div class="narr"><b>・ナレーション：</b>「このアプリで［例：ボタンを一回押す］だけで…」</div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 11 使い方④ -->
+<div class="wrap" data-n="11"><section class="slide s-fund how">
+  <div class="panel">
+    <h2>クラファン風企画書テンプレートの使い方</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div>
+        <h3>基本情報とターゲット設定</h3>
+        <p>アプリ名、起案者の名前を記入。そして「私たちが助けたい人」がどんな日常の課題で困っているか、具体的なシーンを書き出します。</p></div></div>
+      <div class="step"><div class="num">2</div><div>
+        <h3>初期目標の定義（コア機能）</h3>
+        <p>今日絶対に完成させる「たった1つのコア機能」を決めます。まずはこれだけ作れば大成功と言える、最も重要な役割を絞り込みます。</p></div></div>
+      <div class="step"><div class="num">3</div><div>
+        <h3>ストレッチゴールの設定</h3>
+        <p>時間や技術に余裕があったときに追加で解禁したい、演出や連携機能などの「トッピング機能」をワクワクする目標として整理します。</p></div></div>
+      <div class="step"><div class="num">4</div><div>
+        <h3>プロトタイプの動きを設計</h3>
+        <p>右側のスマホ画面枠を使って、「操作前の画面」から「ボタンを押した後の結果画面」へどう変化するか、一連のストーリーを描きます。</p></div></div>
+      <div class="step wide"><div class="num">5</div><div>
+        <h3>画面イメージとアイデアのスケッチ</h3>
+        <p>最下部にある「ラフスケッチ領域」には、思いついた画面の配置、配色、ボタンのデザインなどを自由に手書きでスケッチして具現化しましょう。</p></div></div>
+    </div>
+  </div>
+</section></div>
+
+<!-- 12 ワークシート④ -->
+<div class="wrap" data-n="12"><section class="slide s-fund ws">
+  <div class="ws-head">
+    <div class="badge">クラファン風 アプリ開発プロジェクト</div>
+    <div class="who">プロジェクト起案者:<span class="blank">（なまえ）</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box">
+        <h3>■ プロジェクト名（アプリタイトル）</h3>
+        <div class="fill"></div>
+      </div>
+      <div class="box">
+        <h3>■ 私たちが助けたい人（ターゲット＆ストーリー）</h3>
+        <div class="fill top"><div class="kv">（どんな人が、どんなことで困っている？ なぜこのアプリが必要？）<br>例：部活の連絡がいつもギリギリで、明日の持ち物に焦るマネージャー</div></div>
+      </div>
+      <div class="box">
+        <h3>■ 【初期目標】まずはこれだけ作ればプロジェクト大成功！</h3>
+        <div class="fill top"><div class="kv"><b>今日絶対に完成させる「たった1つのコア機能」を書こう</b><br>例：明日持っていくものを「3つだけ」チェックして保存できる機能</div></div>
+      </div>
+      <div class="box">
+        <h3>■ 【ストレッチゴール】追加解禁する機能！</h3>
+        <div class="fill top"><div class="kv">・ゴール①：例：チェック完了で「おつかれ！」と紙吹雪が出る<br>・ゴール②：例：友達にLINEで『持ち物OK』と送信できる</div></div>
+      </div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ プロトタイプ試作機（画面イメージ）</h3>
+      <p class="sub">初期目標で作る画面の見た目と、ボタンを押したときの動きを描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone">
+            <div class="screen">［操作前の画面］<div class="tapbtn">［ここを押す］</div></div>
+            <div class="home"></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="phone">
+            <div class="screen">［操作後の画面］</div>
+            <div class="home"></div>
+          </div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 13 印刷用① -->
+<div class="wrap" data-n="13"><section class="slide s-note ws">
+  <div class="printtag">印刷用</div>
+  <div class="ws-head">
+    <div class="badge">アプリのアイデアノート</div>
+    <div class="who">名前:<span class="blank">　　　　　　　　　</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box"><h3>1. 誰のどんな瞬間を「ちょっと良く」する？</h3><div class="fill"></div></div>
+      <div class="box"><h3>2. その人が笑顔になる「魔法のボタン」を1つ決めよう！</h3><div class="fill"></div></div>
+      <div class="box"><h3>3. アプリの名前とキャッチコピーをつけよう！</h3>
+        <div class="row"><div class="lbl">・アプリ名:</div><div class="fill"></div></div>
+        <div class="row"><div class="lbl">・キャッチコピー:</div><div class="fill"></div></div></div>
+      <div class="box"><h3>4. 【おまけ】追加したい「トッピング機能」は？</h3><div class="fill"></div></div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>5. アプリの「画面と動き」を描いてみよう！</h3>
+      <p class="sub">※下の枠に、画面の見た目やボタンを押した変化を自由に描いてね</p>
+      <div class="sketch">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 14 印刷用② -->
+<div class="wrap" data-n="14"><section class="slide s-store ws">
+  <div class="printtag">印刷用</div>
+  <div class="ws-head">
+    <div class="badge">App Store リリース予告シート</div>
+    <div class="who">開発者名:<span class="blank">　　　　　　　　　</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box"><h3>■ アプリ名 ＆ アプリアイコン</h3>
+        <div style="display:flex;gap:12px;flex:1">
+          <div class="row" style="flex:1"><div class="lbl">・アプリ名:</div><div class="fill"></div></div>
+          <div class="iconbox">アプリのアイコンを描いてみよう！</div>
+        </div></div>
+      <div class="box"><h3>■ 未来のユーザーからの「★5レビュー」</h3>
+        <div class="stars">★★★★★</div>
+        <div class="fill top"><div class="kv"><b>タイトル:</b><br><b>コメント:</b></div></div></div>
+      <div class="box"><h3>■ このアプリの「推しポイント」</h3>
+        <div style="font-size:14.5px;font-weight:700">・推しポイント①（絶対に作る目玉機能）:</div>
+        <div class="fill"></div>
+        <div style="font-size:14.5px;font-weight:700">・推しポイント②（余裕があれば載せる追加機能）:</div>
+        <div class="fill"></div></div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ ストア掲載用スクリーンショット（画面イメージ）</h3>
+      <p class="sub">スマホ画面の中で「何が表示されて」「どこをタップするか」を描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone"><div class="screen">画面1：つかう前</div><div class="home"></div></div>
+          <div class="arrow">→</div>
+          <div class="phone"><div class="screen">画面2：結果画面</div><div class="home"></div></div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 15 印刷用③ -->
+<div class="wrap" data-n="15"><section class="slide s-sns ws">
+  <div class="printtag">印刷用</div>
+  <div class="ws-head">
+    <div class="badge">SNS PR動画企画コンテ</div>
+    <div class="who">製作者:<span class="blank">@　　　　　　　　</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box"><h3>■ 動画のタイトル（キャッチコピー）</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 1コマ目（冒頭3秒）：あるあるな「悩み・困りごと」</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 3コマ目（ラスト）：使ったあとのスッキリした変化</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 今日の目標（今日作る機能）</h3><div class="fill"></div></div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ 2コマ目（中盤）：アプリ登場 ＆ 実際に使っている画面</h3>
+      <p class="sub">画面のどこをタップして、何が起きるかをイラストで描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone" style="width:186px;height:292px"><div class="screen">［スマホ画面のイラスト］</div><div class="home"></div></div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+      <div class="narr"><b>・ナレーション：</b></div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 16 印刷用④ -->
+<div class="wrap" data-n="16"><section class="slide s-fund ws">
+  <div class="printtag">印刷用</div>
+  <div class="ws-head">
+    <div class="badge">クラファン風 アプリ開発プロジェクト</div>
+    <div class="who">プロジェクト起案者:<span class="blank">　　　　　　　　</span></div>
+  </div>
+  <div class="ws-body">
+    <div class="ws-left">
+      <div class="box"><h3>■ プロジェクト名（アプリタイトル）</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 私たちが助けたい人（ターゲット＆ストーリー）</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 【初期目標】まずはこれだけ作ればプロジェクト大成功！</h3><div class="fill"></div></div>
+      <div class="box"><h3>■ 【ストレッチゴール】追加解禁する機能！</h3><div class="fill"></div></div>
+    </div>
+    <div class="ws-right"><div class="box">
+      <h3>■ プロトタイプ試作機（画面イメージ）</h3>
+      <p class="sub">初期目標で作る画面の見た目と、ボタンを押したときの動きを描こう</p>
+      <div class="sketch">
+        <div class="phones">
+          <div class="phone"><div class="screen">［操作前の画面］</div><div class="home"></div></div>
+          <div class="arrow">→</div>
+          <div class="phone"><div class="screen">［操作後の画面］</div><div class="home"></div></div>
+        </div>
+        <div class="cap">【ラフスケッチ領域】（画面のイラストを自由に描こう）</div>
+      </div>
+    </div></div>
+  </div>
+</section></div>
+
+<!-- 17 まとめ -->
+<div class="wrap" data-n="17"><section class="slide s-dark close">
+  <h2>シートが埋まったら、DAY3の開発へ</h2>
+  <p class="lead">4枚のシートは入口が違うだけで、行き着く先は同じ3つです。</p>
+  <div class="tl">
+    <div class="tstep">
+      <div class="k">WHO</div>
+      <h3>誰の、どの瞬間</h3>
+      <p>助けたい人と、その人が困っている具体的な場面を1つに決める。「みんな」ではなく「あの人」まで絞ると、作るものが決まります。</p>
+      <div class="pin">シートの「ターゲット」「助けたい人」「1コマ目」</div>
+    </div>
+    <div class="tstep">
+      <div class="k">WHAT</div>
+      <h3>魔法のボタン1つ</h3>
+      <p>押すだけでその人が笑顔になる機能を、たった1つに絞る。今日絶対に完成させるコア機能は、これ1つで大成功です。</p>
+      <div class="pin">シートの「魔法のボタン」「推しポイント①」「初期目標」</div>
+    </div>
+    <div class="tstep">
+      <div class="k">HOW</div>
+      <h3>画面と動き</h3>
+      <p>「押す前の画面」と「押した後の画面」の2枚を描く。この2枚が描けていれば、そのままWebアプリの実装に入れます。</p>
+      <div class="pin">シートの「ラフスケッチ領域」「プロトタイプ試作機」</div>
+    </div>
+  </div>
+  <div class="rule">余った時間で足す機能は<b>「トッピング機能」「ストレッチゴール」</b>に書いておく。<br>
+    まずはコア機能1つを動くところまで — <b>アイデアの出し方に「正解」はありません。</b></div>
+</section></div>
+
+</div></div>
+
+<div id="bar">
+  <button class="nav" id="prev" aria-label="前のスライド">◀</button>
+  <div id="count" aria-live="polite">1 / 17</div>
+  <button class="nav" id="next" aria-label="次のスライド">▶</button>
+  <button class="nav" id="grid">一覧 (O)</button>
+  <button class="nav" id="prn">印刷 / PDF</button>
+  <div class="title">プログラミング学習会 DAY3 — アイディアをふくらませよう</div>
+</div>
+
+<script>
+(function(){
+  var wraps = Array.prototype.slice.call(document.querySelectorAll('.wrap'));
+  var deck = document.getElementById('deck');
+  var count = document.getElementById('count');
+  var i = 0, ov = false;
+
+  function fit(){
+    if(ov) return;
+    var w = window.innerWidth, h = window.innerHeight - 52;
+    deck.style.setProperty('--s', Math.min(w/1280, h/720).toFixed(4));
+  }
+  function show(n){
+    i = (n + wraps.length) % wraps.length;
+    wraps.forEach(function(w, k){ w.classList.toggle('on', k === i); });
+    count.textContent = (i+1) + ' / ' + wraps.length;
+    if(location.hash !== '#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+    if(ov) wraps[i].scrollIntoView({block:'nearest'});
+  }
+  function overview(on){
+    ov = on;
+    document.body.classList.toggle('ov', ov);
+    if(ov){ deck.style.removeProperty('--s'); wraps[i].scrollIntoView({block:'center'}); }
+    else { fit(); }
+  }
+
+  document.getElementById('prev').onclick = function(){ show(i-1); };
+  document.getElementById('next').onclick = function(){ show(i+1); };
+  document.getElementById('grid').onclick = function(){ overview(!ov); };
+  document.getElementById('prn').onclick = function(){ if(ov) overview(false); window.print(); };
+
+  wraps.forEach(function(w, k){
+    w.addEventListener('click', function(){ if(ov){ show(k); overview(false); } });
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' '){ e.preventDefault(); show(i+1); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); show(i-1); }
+    else if(e.key === 'Home'){ e.preventDefault(); show(0); }
+    else if(e.key === 'End'){ e.preventDefault(); show(wraps.length-1); }
+    else if(e.key === 'o' || e.key === 'O'){ overview(!ov); }
+    else if(e.key === 'Escape' && ov){ overview(false); }
+  });
+
+  window.addEventListener('resize', fit);
+  window.addEventListener('hashchange', function(){
+    var n = parseInt((location.hash||'').slice(1), 10);
+    if(!isNaN(n) && n-1 !== i) show(n-1);
+  });
+  var start = parseInt((location.hash||'').slice(1), 10);
+  fit();
+  show(isNaN(start) ? 0 : start - 1);
+})();
+</script>
