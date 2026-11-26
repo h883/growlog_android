@@ -1,7 +1,6 @@
 package com.example.sns_v1.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -130,7 +129,6 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
                     ) {
-                        item { FocusInvitationCard(onClick = onNavigateToFocus) }
                         items(posts, key = { it.postId }) { post ->
                             PostCard(
                                 post = post,
@@ -138,35 +136,13 @@ fun HomeScreen(
                                 onCommentClick = { onNavigateToPostDetail(post.postId) },
                                 onAuthorClick = { onNavigateToUserProfile(post.userName) },
                                 onSave = { viewModel.toggleSave(post.postId) },
-                                onPostClick = { onNavigateToPostDetail(post.postId) }
+                                onPostClick = { onNavigateToPostDetail(post.postId) },
+                                compact = true
                             )
+                            HorizontalDivider(color = BorderColor, thickness = 1.dp)
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FocusInvitationCard(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onClick),
-        color = Accent,
-        shape = RoundedCornerShape(20.dp)
-    ) {
-        Column(Modifier.padding(18.dp)) {
-            Text("FOCUS SESSION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color.White.copy(alpha = .82f))
-            Spacer(Modifier.height(6.dp))
-            Text("いまから、ひとつだけ進めよう", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = androidx.compose.ui.graphics.Color.White)
-            Spacer(Modifier.height(6.dp))
-            Text("集中した時間が、あなたの成長になります。", fontSize = 13.sp, color = androidx.compose.ui.graphics.Color.White.copy(alpha = .86f))
-            Spacer(Modifier.height(14.dp))
-            Surface(shape = RoundedCornerShape(20.dp), color = androidx.compose.ui.graphics.Color.White) {
-                Text("集中をはじめる", color = Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp))
             }
         }
     }

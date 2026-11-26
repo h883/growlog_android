@@ -47,7 +47,8 @@ fun PostCard(
     onCommentClick: () -> Unit = {},
     onAuthorClick: () -> Unit = {},
     onSave: () -> Unit = {},
-    onPostClick: () -> Unit = {}
+    onPostClick: () -> Unit = {},
+    compact: Boolean = false
 ) {
     val reactionScale by animateFloatAsState(
         targetValue = if (post.myReaction) 1.2f else 1f,
@@ -55,12 +56,19 @@ fun PostCard(
         label = "reactionScale"
     )
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
+    val containerModifier = if (compact) {
+        Modifier
+    } else {
+        Modifier
             .padding(horizontal = 16.dp, vertical = 5.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(containerModifier)
             .clickable(onClick = onPostClick)
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
     ) {
@@ -105,6 +113,8 @@ fun PostCard(
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = post.content,
+                maxLines = if (compact) 4 else Int.MAX_VALUE,
+                overflow = TextOverflow.Ellipsis,
                 fontSize = 15.sp,
                 lineHeight = 21.sp,
                 color = MaterialTheme.colorScheme.onBackground
